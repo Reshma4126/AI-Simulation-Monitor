@@ -124,6 +124,25 @@ DEFAULT_MONITOR_STATE = {
         "avRR": {"low": 8, "high": 30},
         "Tblood": {"low": 35, "high": 39},
     },
+    # Visibility toggles
+    "show_ecg": True,
+    "show_hr": True,
+    "show_spo2": True,
+    "show_pleth": True,
+    "show_resp": True,
+    "show_rr": True,
+    "show_nibp": True,
+    "show_map": True,
+    "show_temp": True,
+    "show_etco2": True,
+    "show_ibp": True,
+    "show_cvp": True,
+
+    # NIBP state
+    "nibp_state": "IDLE",
+    "nibp_interval": 0,
+    "nibp_last_measured": "",
+
     "last_updated": None,
     "updated_by": "",
     "initial_readings_hidden": False,

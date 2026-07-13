@@ -237,6 +237,7 @@ export default function InstructorDashboard() {
           <button className="btn-classic btn-sm" onClick={() => setShowTrendsModal(true)}>📈 Trends</button>
           <button className="btn-classic btn-sm" onClick={() => setShowScenarioDrawer(true)}>📋 Case Details</button>
           <button className="btn-classic btn-sm" onClick={openScenarioList}>📄 Change Scenario</button>
+          <button className="btn-classic btn-sm" onClick={() => setOpenDialog("toggles")}>⚙️ Display Toggles</button>
           <button className="btn-classic btn-sm" onClick={requestRandomScenario}>🎲 Random</button>
         </div>
         <div className="topbar-right">
@@ -314,7 +315,68 @@ export default function InstructorDashboard() {
       )}
 
       {openDialog && (
-        <InstructorParameterModal field={openDialog} onClose={() => setOpenDialog(null)} />
+        <InstructorParameterModal
+          field={openDialog}
+          pendingMode={true}
+          onApply={async (stagedValues) => {
+            const mapped = {};
+            if (stagedValues.HR !== undefined) mapped.HR = Number(stagedValues.HR);
+            if (stagedValues.rhythm !== undefined) mapped.rhythm = stagedValues.rhythm;
+            if (stagedValues.BP_sys !== undefined) mapped.ABP_sys = Number(stagedValues.BP_sys);
+            if (stagedValues.BP_dia !== undefined) mapped.ABP_dia = Number(stagedValues.BP_dia);
+            if (stagedValues.PAP_sys !== undefined) mapped.PAP_sys = Number(stagedValues.PAP_sys);
+            if (stagedValues.PAP_dia !== undefined) mapped.PAP_dia = Number(stagedValues.PAP_dia);
+            if (stagedValues.SpO2 !== undefined) mapped.SpO2 = Number(stagedValues.SpO2);
+            if (stagedValues.RR !== undefined) mapped.avRR = Number(stagedValues.RR);
+            if (stagedValues.etCO2 !== undefined) mapped.etCO2 = Number(stagedValues.etCO2);
+            if (stagedValues.Tblood !== undefined) mapped.Tblood = Number(stagedValues.Tblood);
+            
+            if (stagedValues.NBP_sys !== undefined) mapped.NBP_sys = Number(stagedValues.NBP_sys);
+            if (stagedValues.NBP_dia !== undefined) mapped.NBP_dia = Number(stagedValues.NBP_dia);
+            if (stagedValues.nibp_interval !== undefined) mapped.nibp_interval = Number(stagedValues.nibp_interval);
+            
+            const toggles = ["show_ecg", "show_hr", "show_spo2", "show_pleth", "show_resp", "show_rr", "show_nibp", "show_map", "show_temp", "show_etco2"];
+            for (const key of toggles) {
+              if (stagedValues[key] !== undefined) mapped[key] = stagedValues[key];
+            }
+            
+            return new Promise((resolve, reject) => {
+              socket.emit("apply_all_settings", mapped, (response) => {
+                if (response && response.status === "success") {
+                  const engineUpdate = {};
+                  if (stagedValues.HR !== undefined) engineUpdate.heart_rate = Number(stagedValues.HR);
+                  if (stagedValues.SpO2 !== undefined) engineUpdate.spo2 = Number(stagedValues.SpO2);
+                  if (stagedValues.BP_sys !== undefined) engineUpdate.sys_bp = Number(stagedValues.BP_sys);
+                  if (stagedValues.BP_dia !== undefined) engineUpdate.dia_bp = Number(stagedValues.BP_dia);
+                  if (stagedValues.PAP_sys !== undefined) engineUpdate.pap_sys = Number(stagedValues.PAP_sys);
+                  if (stagedValues.PAP_dia !== undefined) engineUpdate.pap_dia = Number(stagedValues.PAP_dia);
+                  if (stagedValues.RR !== undefined) engineUpdate.resp_rate = Number(stagedValues.RR);
+                  if (stagedValues.etCO2 !== undefined) engineUpdate.etco2 = Number(stagedValues.etCO2);
+                  if (stagedValues.rhythm !== undefined) engineUpdate.rhythm = getEngineRhythm(stagedValues.rhythm);
+                  
+                  if (stagedValues.stElev !== undefined) engineUpdate.st_elevation = stagedValues.stElev;
+                  if (stagedValues.stDepr !== undefined) engineUpdate.st_depression = stagedValues.stDepr;
+                  if (stagedValues.artifactLevel !== undefined) engineUpdate.artifact_level = stagedValues.artifactLevel;
+                  if (stagedValues.artifactType !== undefined) engineUpdate.artifact_type = stagedValues.artifactType;
+                  if (stagedValues.transferTime !== undefined) engineUpdate.transfer_time = stagedValues.transferTime;
+                  if (stagedValues.transferFn !== undefined) engineUpdate.transfer_fn = stagedValues.transferFn;
+                  
+                  if (Object.keys(engineUpdate).length > 0) {
+                    useECGStore.getState().sendCommand(engineUpdate);
+                  }
+                  resolve(response);
+                } else {
+                  reject(new Error("Failed to apply settings"));
+                }
+              });
+              
+              setTimeout(() => {
+                resolve({ status: "success" });
+              }, 1500);
+            });
+          }}
+          onClose={() => setOpenDialog(null)}
+        />
       )}
       
     </div>

@@ -130,18 +130,24 @@ export default function ScenarioDrawer({ isOpen, onClose, scenario }) {
   const handleApplyChanges = () => {
     if (!hasPending) return;
 
-    const applyField = (storeKey, value) => {
-      updateParam(storeKey, Number(value));
-      socket.emit("update_parameter", { field: storeKey, value: Number(value) });
-    };
+    const mapped = {};
+    if ("HR" in pendingEdits) mapped.HR = Number(pendingEdits.HR);
+    if ("BP_sys" in pendingEdits) mapped.ABP_sys = Number(pendingEdits.BP_sys);
+    if ("BP_dia" in pendingEdits) mapped.ABP_dia = Number(pendingEdits.BP_dia);
+    if ("SpO2" in pendingEdits) mapped.SpO2 = Number(pendingEdits.SpO2);
+    if ("RR" in pendingEdits) mapped.avRR = Number(pendingEdits.RR);
+    if ("etCO2" in pendingEdits) mapped.etCO2 = Number(pendingEdits.etCO2);
+    if ("Tblood" in pendingEdits) mapped.Tblood = Number(pendingEdits.Tblood);
 
-    if ("HR"     in pendingEdits) applyField("HR",      pendingEdits.HR);
-    if ("BP_sys" in pendingEdits) applyField("ABP_sys", pendingEdits.BP_sys);
-    if ("BP_dia" in pendingEdits) applyField("ABP_dia", pendingEdits.BP_dia);
-    if ("SpO2"   in pendingEdits) applyField("SpO2",    pendingEdits.SpO2);
-    if ("RR"     in pendingEdits) applyField("avRR",    pendingEdits.RR);
-    if ("etCO2"  in pendingEdits) applyField("etCO2",   pendingEdits.etCO2);
-    if ("Tblood" in pendingEdits) applyField("Tblood",  pendingEdits.Tblood);
+    if (pendingECG) {
+      if (pendingECG.rhythm) {
+        const monitorRhythm = getMonitorRhythmLabel(pendingECG.rhythm);
+        if (monitorRhythm) mapped.rhythm = monitorRhythm;
+      }
+    }
+
+    // Emit atomic settings update
+    socket.emit("apply_all_settings", mapped);
 
     // Commit ECG engine state (HR, SpO2, BP, RR, EtCO2, rhythm, ST, artifacts)
     const engineCmd = {
@@ -161,17 +167,9 @@ export default function ScenarioDrawer({ isOpen, onClose, scenario }) {
       if (pendingECG.stDepr != null) engineCmd.st_depression = pendingECG.stDepr;
       if (pendingECG.artifactLevel != null) engineCmd.artifact_level = pendingECG.artifactLevel;
       if (pendingECG.artifactType)  engineCmd.artifact_type = pendingECG.artifactType;
-
-      // Commit rhythm to monitor store + socket
-      const monitorRhythm = getMonitorRhythmLabel(pendingECG.rhythm);
-      if (monitorRhythm) {
-        updateParam("rhythm", monitorRhythm);
-        socket.emit("update_rhythm", { rhythm: monitorRhythm });
-      }
     }
 
     if (Object.keys(engineCmd).length > 2) {
-      // Only send if there's something beyond transfer params
       sendCommand(engineCmd);
     }
 

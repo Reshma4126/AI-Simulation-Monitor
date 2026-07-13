@@ -24,6 +24,92 @@ _transfer_tasks: dict = {}
 
 # Scenarios Cache
 SCENARIOS_CACHE = []
+_active_nibp_loops = {}
+
+async def _run_nibp_measurement(session_id, session_code):
+    try:
+        pool = await get_db_pool()
+        stages = [
+            ("INFLATING", 2.5),
+            ("MEASURING", 3.0),
+            ("PROCESSING", 2.0)
+        ]
+        
+        for state_name, duration in stages:
+            async with pool.acquire() as conn:
+                async with conn.cursor(aiomysql.DictCursor) as cur:
+                    await cur.execute("SELECT state_data FROM monitor_state WHERE session_id = %s", (session_id,))
+                    state_row = await cur.fetchone()
+                    if not state_row:
+                        return
+                    state = json.loads(state_row["state_data"])
+                    state["nibp_state"] = state_name
+                    await cur.execute("UPDATE monitor_state SET state_data = %s WHERE session_id = %s", (json.dumps(state), session_id))
+            
+            await sio.emit("state_update", state, room=session_code)
+            await asyncio.sleep(duration)
+            
+        async with pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute("SELECT state_data FROM monitor_state WHERE session_id = %s", (session_id,))
+                state_row = await cur.fetchone()
+                if not state_row:
+                    return
+                state = json.loads(state_row["state_data"])
+                
+                target_sys = state.get("nbp_target_sys", state.get("NBP_sys", 120.0))
+                target_dia = state.get("nbp_target_dia", state.get("NBP_dia", 80.0))
+                
+                state["NBP_sys"] = target_sys
+                state["NBP_dia"] = target_dia
+                state["NBP_mean"] = round(target_dia + (target_sys - target_dia) / 3.0, 1)
+                state["nibp_state"] = "COMPLETE"
+                state["nibp_last_measured"] = datetime.utcnow().isoformat()
+                
+                await cur.execute("UPDATE monitor_state SET state_data = %s WHERE session_id = %s", (json.dumps(state), session_id))
+                
+        await sio.emit("state_update", state, room=session_code)
+    except Exception as e:
+        print(f"[NIBP Measurement Error] {e}")
+
+async def _nibp_interval_loop(session_id, session_code):
+    while True:
+        try:
+            await asyncio.sleep(10)
+            pool = await get_db_pool()
+            async with pool.acquire() as conn:
+                async with conn.cursor(aiomysql.DictCursor) as cur:
+                    await cur.execute("SELECT state_data FROM monitor_state WHERE session_id = %s", (session_id,))
+                    state_row = await cur.fetchone()
+                    if not state_row:
+                        break
+                    state = json.loads(state_row["state_data"])
+                    
+            interval = int(state.get("nibp_interval", 0))
+            nibp_state = state.get("nibp_state", "IDLE")
+            
+            if interval > 0 and nibp_state in ("IDLE", "COMPLETE"):
+                last_measured_str = state.get("nibp_last_measured", "")
+                should_measure = False
+                if not last_measured_str:
+                    should_measure = True
+                else:
+                    try:
+                        last_measured = datetime.fromisoformat(last_measured_str)
+                        elapsed_minutes = (datetime.utcnow() - last_measured).total_seconds() / 60.0
+                        if elapsed_minutes >= interval:
+                            should_measure = True
+                    except Exception:
+                        should_measure = True
+                        
+                if should_measure:
+                    asyncio.create_task(_run_nibp_measurement(session_id, session_code))
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print(f"[NIBP Loop Error] {e}")
+            await asyncio.sleep(5)
+
 
 def safe_parse_json(val):
     if isinstance(val, str):
@@ -224,6 +310,11 @@ async def join_session(sid, data):
                         student_scenario = dict(scenario)
                         student_scenario.pop("initial_readings", None)
                         await sio.emit("scenario_selected", student_scenario, to=sid)
+
+            if payload.get("role") == "instructor":
+                session_id = session["id"]
+                if session_id not in _active_nibp_loops:
+                    _active_nibp_loops[session_id] = asyncio.create_task(_nibp_interval_loop(session_id, session_code))
 
     print(f"[SIO] {payload.get('sub')} joined session {session_code}")
 
@@ -527,6 +618,104 @@ async def request_random_scenario(sid):
     import random
     scenario = random.choice(SCENARIOS_CACHE)
     await select_scenario(sid, {"scenario_id": scenario["id"]})
+
+
+@sio.event
+async def apply_all_settings(sid, data):
+    """Instructor commits all current settings as a single transaction."""
+    session_data = await sio.get_session(sid)
+    if not session_data or session_data.get("role") != "instructor":
+        await sio.emit("error", {"message": "Instructor role required"}, to=sid)
+        return
+
+    session_code = session_data.get("session_code")
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute("SELECT id, started_at, event_log FROM sessions WHERE session_code = %s", (session_code,))
+            session = await cur.fetchone()
+            if not session:
+                return
+
+            await cur.execute("SELECT state_data FROM monitor_state WHERE session_id = %s", (session["id"],))
+            state_row = await cur.fetchone()
+            state = json.loads(state_row["state_data"])
+
+            # Extract NIBP updates to target variables
+            if "NBP_sys" in data:
+                state["nbp_target_sys"] = data.pop("NBP_sys")
+            if "NBP_dia" in data:
+                state["nbp_target_dia"] = data.pop("NBP_dia")
+
+            # Apply other settings
+            for k, v in data.items():
+                state[k] = v
+
+            # Keep derived fields in sync (except NIBP which is updated on cuff finish)
+            if "HR" in data:
+                state["pulse_rate"] = data["HR"]
+            if "ABP_sys" in data or "ABP_dia" in data:
+                sys_val = state.get("ABP_sys", 120.0)
+                dia_val = state.get("ABP_dia", 80.0)
+                state["MAP"] = round(dia_val + (sys_val - dia_val) / 3.0, 1)
+            if "PAP_sys" in data or "PAP_dia" in data:
+                sys_val = state.get("PAP_sys", 20.0)
+                dia_val = state.get("PAP_dia", 10.0)
+                state["PAP_mean"] = round(dia_val + (sys_val - dia_val) / 3.0, 1)
+
+            state["initial_readings_hidden"] = False
+            state["last_updated"] = datetime.utcnow().isoformat()
+            state["updated_by"] = session_data.get("username", "")
+            state["alarms"] = compute_alarms(state)
+
+            await cur.execute("UPDATE monitor_state SET state_data = %s WHERE session_id = %s", (json.dumps(state), session["id"]))
+
+            event_log = json.loads(session["event_log"]) if session["event_log"] else []
+            event_log.append({
+                "timestamp": datetime.utcnow().isoformat(),
+                "event": f"Applied atomic settings update",
+            })
+            await cur.execute("UPDATE sessions SET event_log = %s WHERE id = %s", (json.dumps(event_log), session["id"]))
+
+            state["started_at"] = session["started_at"].isoformat() if session["started_at"] else datetime.utcnow().isoformat()
+
+    await sio.emit("state_update", state, room=session_code)
+    await sio.emit("alarm_update", {"alarms": state["alarms"]}, room=session_code)
+
+    # If rhythm/HR changed, broadcast rhythm_change
+    if any(k in data for k in ["rhythm", "extrasystole", "HR", "ecg_lead", "artifact_electrical", "artifact_muscular", "emd_pea"]):
+        await sio.emit("rhythm_change", {
+            k: state.get(k) for k in
+            ["rhythm", "extrasystole", "HR", "ecg_lead",
+             "artifact_electrical", "artifact_muscular", "emd_pea"]
+        }, room=session_code)
+
+    return {"status": "success"}
+
+
+@sio.event
+async def measure_nibp(sid):
+    session_data = await sio.get_session(sid)
+    if not session_data or session_data.get("role") != "instructor":
+        await sio.emit("error", {"message": "Instructor role required"}, to=sid)
+        return
+    session_code = session_data.get("session_code")
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute("SELECT id FROM sessions WHERE session_code = %s", (session_code,))
+            session = await cur.fetchone()
+            if not session:
+                return
+
+            await cur.execute("SELECT state_data FROM monitor_state WHERE session_id = %s", (session["id"],))
+            state_row = await cur.fetchone()
+            if state_row:
+                state = json.loads(state_row["state_data"])
+                if state.get("nibp_state") in ("INFLATING", "MEASURING", "PROCESSING"):
+                    return
+
+    asyncio.create_task(_run_nibp_measurement(session["id"], session_code))
 
 
 # ── Helpers ───────────────────────────────────────────────────────

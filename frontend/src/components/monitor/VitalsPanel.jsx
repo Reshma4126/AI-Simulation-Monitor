@@ -16,6 +16,13 @@ const VITAL_GROUPS = [
     ],
   },
   {
+    label: "NIBP",
+    color: "#FF33AA",
+    items: [
+      { key: "NBP_sys", label: "NIBP", unit: "mmHg", size: "lg", paired: "NBP_dia", separator: "/" },
+    ],
+  },
+  {
     label: "ABP",
     color: "#FF3333",
     items: [
@@ -71,14 +78,32 @@ export default function VitalsPanel({ onVitalClick, compact, isStudent, renderPo
   const classes = compact ? COMPACT_SIZE_CLASSES : SIZE_CLASSES;
   const isHidden = isStudent && state.initial_readings_hidden;
 
+  const isGroupVisible = (label) => {
+    if (label === "ECG") return state.show_hr !== false;
+    if (label === "SpO₂") return state.show_spo2 !== false;
+    if (label === "NIBP") return state.show_nibp !== false;
+    if (label === "ABP") return state.show_ibp !== false;
+    if (label === "PAP") return state.show_ibp !== false;
+    if (label === "CO₂") return (state.show_etco2 !== false || state.show_rr !== false);
+    if (label === "Temp") return state.show_temp !== false;
+    if (label === "CO") return state.show_ibp !== false;
+    return true;
+  };
+
+  const isItemVisible = (key) => {
+    if (key === "etCO2") return state.show_etco2 !== false;
+    if (key === "avRR") return state.show_rr !== false;
+    return true;
+  };
+
   return (
     <div className="vitals-panel">
-      {VITAL_GROUPS.map((group) => (
+      {VITAL_GROUPS.filter(g => isGroupVisible(g.label)).map((group) => (
         <div key={group.label} className="vital-brick">
           <div className="vital-brick-label" style={{ color: group.color }}>
             {group.label}
           </div>
-          {group.items.map((item) => {
+          {group.items.filter(i => isItemVisible(i.key)).map((item) => {
             const val = state[item.key];
             let displayVal = item.paired
               ? `${Math.round(val)}/${Math.round(state[item.paired])}`
@@ -92,13 +117,21 @@ export default function VitalsPanel({ onVitalClick, compact, isStudent, renderPo
               displayVal = item.paired ? "--/--" : "--";
             }
 
-            const showSublabel = !["HR", "SpO₂", "ABP", "PAP", "CO"].includes(item.label);
+            if (group.label === "NIBP" && !isHidden) {
+              const ns = state.nibp_state || "IDLE";
+              if (ns === "INFLATING") displayVal = "Inflating...";
+              else if (ns === "MEASURING") displayVal = "Measuring...";
+              else if (ns === "PROCESSING") displayVal = "Processing...";
+              else if (ns === "IDLE") displayVal = "Cuff Idle";
+            }
+
+            const showSublabel = !["HR", "SpO₂", "ABP", "PAP", "CO", "NIBP"].includes(item.label);
 
             return (
               <div
                 key={item.key}
                 className={`vital-value-row ${item.highlight ? "vital-highlight" : ""}`}
-                onClick={() => onVitalClick && onVitalClick(item.key)}
+                onClick={() => onVitalClick && onVitalClick(group.label === "NIBP" ? "nbp" : item.key)}
                 style={{ cursor: onVitalClick ? "pointer" : "default" }}
               >
                 {showSublabel && (
@@ -112,7 +145,12 @@ export default function VitalsPanel({ onVitalClick, compact, isStudent, renderPo
                 >
                   {displayVal}
                 </span>
-                <span className="vital-unit">{item.unit}</span>
+                {group.label !== "NIBP" && <span className="vital-unit">{item.unit}</span>}
+                {group.label === "NIBP" && (state.nibp_state === "COMPLETE" || !state.nibp_state) && state.show_map !== false && !isHidden && (
+                  <div className="vital-nibp-map" style={{ fontSize: compact ? "10px" : "12px", color: group.color, marginTop: "2px" }}>
+                    MAP {Math.round(state.NBP_mean ?? 93)}
+                  </div>
+                )}
                 {renderPopover && renderPopover(item.key)}
               </div>
             );

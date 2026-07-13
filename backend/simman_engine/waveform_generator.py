@@ -101,8 +101,10 @@ def get_beat_params(state: ECGState, rhythm: RhythmType | None = None) -> BeatPa
         return bp
 
     if r == RhythmType.AVB1:
-        # First-degree block keeps the same morphology, but the engine handles the prolonged PR.
-        return _nsr()
+        # First-degree block keeps sinus morphology but with slightly reduced P-wave amplitude (0.11)
+        bp = _nsr()
+        bp.p = Wave(0.11, 0.12, 0.024)
+        return bp
 
     if r == RhythmType.PEA:
         # PEA retains organised electrical activity; low-voltage morphology
@@ -127,9 +129,9 @@ def get_beat_params(state: ECGState, rhythm: RhythmType | None = None) -> BeatPa
         return bp
 
     if r == RhythmType.JUNCTIONAL:
-        # Retrograde P (inverted, after QRS)
+        # Retrograde P (inverted, immediately before QRS)
         bp = _nsr()
-        bp.p = Wave(-0.10, 0.55, 0.020)
+        bp.p = Wave(-0.12, 0.12, 0.015)
         return bp
 
 
@@ -156,20 +158,23 @@ def get_beat_params(state: ECGState, rhythm: RhythmType | None = None) -> BeatPa
         )
 
     if r == RhythmType.SVT:
-        # Normal narrow QRS, P buried in T or absent
-        bp = _nsr()
-        bp.p = None
-        bp.r.amp = 0.90
-        return bp
-
-    if r == RhythmType.VT:
-        # Wide bizarre QRS, no P, rapid
+        # Clinically accurate AVNRT: sharp narrow QRS, shortened ST segment, smaller/narrower T wave closer to QRS, no P wave
         return BeatParams(
             p = None,
-            q = Wave(-0.15,  0.35, 0.025),
-            r = Wave( 1.30,  0.43, 0.035),
-            s = Wave(-0.50,  0.53, 0.030),
-            t = Wave(-0.30,  0.72, 0.090),
+            q = Wave(-0.06,  0.385, 0.008),
+            r = Wave( 1.20,  0.41,  0.012),
+            s = Wave(-0.18,  0.43,  0.008),
+            t = Wave( 0.18,  0.58,  0.035),
+        )
+
+    if r == RhythmType.VT:
+        # Clinically accurate Monomorphic VT: wide bizarre QRS (>140 ms), steep upstroke, secondary ST-T discordance, no P
+        return BeatParams(
+            p = None,
+            q = Wave(-0.15,  0.38,  0.015),
+            r = Wave( 1.30,  0.44,  0.035),
+            s = Wave(-0.35,  0.52,  0.020),
+            t = Wave(-0.25,  0.72,  0.055),
             qrs_extra_width=0.025,
         )
 
@@ -180,10 +185,10 @@ def get_beat_params(state: ECGState, rhythm: RhythmType | None = None) -> BeatPa
     if r == RhythmType.TORSADES:
         return BeatParams(
             p = None,
-            q = Wave(-0.20,  0.35, 0.030),
-            r = Wave( 1.50,  0.43, 0.040),
-            s = Wave(-0.60,  0.55, 0.030),
-            t = Wave(-0.40,  0.75, 0.090),
+            q = Wave(-0.20,  0.35, 0.020),
+            r = Wave( 1.50,  0.43, 0.035),
+            s = Wave(-0.60,  0.52, 0.025),
+            t = Wave(-0.40,  0.72, 0.055),
             qrs_extra_width=0.030,
             rr_jitter=0.08,
         )
@@ -209,19 +214,21 @@ def get_beat_params(state: ECGState, rhythm: RhythmType | None = None) -> BeatPa
         )
 
     if r == RhythmType.RBBB:
-        # RSR' in V1, wide S in I/V5/V6
+        # RSR' in V1, wide S in I/V5/V6; discordant inverted T wave
         return BeatParams(
             p = Wave( 0.15,  0.13, 0.030),
             q = Wave(-0.05,  0.38, 0.012),
             r = Wave( 1.00,  0.41, 0.020),
             s = Wave(-0.30,  0.52, 0.018),   # deep wide S
-            t = Wave( 0.25,  0.68, 0.060),
+            t = Wave(-0.18,  0.72, 0.055),
             qrs_extra_width=0.018,
         )
 
     if r in (RhythmType.ANT_STEMI, RhythmType.INF_STEMI, RhythmType.LAT_STEMI):
+        # Acute STEMI: broad, tall hyperacute T wave
         bp = _nsr()
-        return bp   # ST handled by lead_generator using state.st_elevation
+        bp.t = Wave(0.40, 0.65, 0.080)
+        return bp
 
     # fallback
     return _nsr()
@@ -261,6 +268,10 @@ class WaveformGenerator:
         self._pap_sys_var: float = 0.0
         self._pap_dia_var: float = 0.0
         self._qrs_amp_var: float = 1.0
+        self._pac_state: int = 0
+        self._normal_beat_count_pac: int = 0
+        self._pvc_state: int = 0
+        self._normal_beat_count_pvc: int = 0
 
     def begin_rhythm_transition(
         self,
@@ -271,6 +282,10 @@ class WaveformGenerator:
     ) -> None:
         source_rhythm = self._coerce_rhythm(source)
         target_rhythm = self._coerce_rhythm(target)
+        if target_rhythm == RhythmType.VF:
+            self._vf_duration_samples = 0
+            self._vf_phase_perturbation = 0.0
+            self._vf_amp_modulator = 1.0
         if source_rhythm == target_rhythm or fn == TransferFn.IMMEDIATE or duration_s <= 0.0:
             self._rhythm_transition = None
             return
@@ -402,7 +417,7 @@ class WaveformGenerator:
         hr = state.heart_rate
         beat_period = 60.0 / hr
         r_phase = 0.41
-        delay_phase = min(0.65, 0.140 / beat_period)
+        delay_phase = min(0.65, 0.320 / beat_period)
         pulse_pressure = max(0.0, float(state.sys_bp - state.dia_bp))
 
         # The pleth is not a blood-pressure trace, but pulse pressure and
@@ -702,17 +717,35 @@ class WaveformGenerator:
         hr = state.heart_rate
         rr_mean = 60.0 / hr
         params = get_beat_params(state, rhythm)
-        rhythm = self._coerce_rhythm(rhythm if rhythm is not None else state.rhythm)
-
-        # AFib: irregular RR (uniform jitter ±20%)
-        # Dataset-informed PVC cadence: two conducted beats, an early wide
-        # ventricular beat, then a compensatory pause.
-        if rhythm == RhythmType.PVC:
-            cycle = self._beat_count % 4
-            if cycle == 2:
-                return rr_mean * 0.62
-            if cycle == 3:
-                return rr_mean * 1.38
+        if rhythm in (RhythmType.AVB2_I, RhythmType.AVB2_II):
+            # Dynamic block conduction ratio C based on heart rate
+            if hr >= 70:
+                C = 4
+            elif hr >= 58:
+                C = 3
+            else:
+                C = 2
+            # Atrial rate is hr * C / (C - 1)
+            effective_hr = hr * float(C) / float(C - 1)
+            rr_mean = 60.0 / effective_hr
+        elif rhythm == RhythmType.AFLUTTER:
+            if hr > 120:
+                effective_hr = 150.0
+            elif hr > 85:
+                effective_hr = 100.0
+            else:
+                effective_hr = 75.0
+            rr_mean = 60.0 / effective_hr
+        elif rhythm == RhythmType.PVC:
+            if self._pvc_state == 1:
+                return rr_mean * 0.60
+            elif self._pvc_state == 2:
+                return rr_mean * 1.40
+        elif rhythm == RhythmType.PAC:
+            if self._pac_state == 1:
+                return rr_mean * 0.60
+            elif self._pac_state == 2:
+                return rr_mean * 1.20
 
         # General HRV
         return max(rr_mean * self._rr_factor, 0.20)  # floor at 0.2s (300 bpm)
@@ -722,7 +755,7 @@ class WaveformGenerator:
         rhythm = self._coerce_rhythm(rhythm)
         if rhythm == RhythmType.AFIB:
             # Irregularly irregular ventricular rate
-            return float(np.random.uniform(0.75, 1.35))
+            return float(np.random.uniform(0.70, 1.30))
         if rhythm == RhythmType.AFLUTTER:
             # Fixed 2:1 conduction has very small variability (±1%)
             return float(np.random.uniform(0.99, 1.01))
@@ -756,41 +789,119 @@ class WaveformGenerator:
         # Beat-to-beat QRS amplitude variability: ±5%
         self._qrs_amp_var = float(np.random.uniform(0.95, 1.05))
 
-        # Wenckebach: track dropped beats
-        if rhythm == RhythmType.AVB2_I:
-            self._avb2_counter = (self._avb2_counter + 1) % 4
+        # Wenckebach / Mobitz II: track dropped beats with dynamic cycle length C
+        if rhythm in (RhythmType.AVB2_I, RhythmType.AVB2_II):
+            hr = state.heart_rate
+            if hr >= 70:
+                C = 4
+            elif hr >= 58:
+                C = 3
+            else:
+                C = 2
+            self._avb2_counter = (self._avb2_counter + 1) % C
         # Torsades: rotate QRS axis slowly
         if rhythm == RhythmType.TORSADES:
             self._torsades_axis += 0.15
+        
+        # PAC: track state machine transitions
+        if rhythm == RhythmType.PAC:
+            if self._pac_state == 1:
+                self._pac_state = 2
+            elif self._pac_state == 2:
+                self._pac_state = 0
+            else:
+                self._normal_beat_count_pac += 1
+                if self._normal_beat_count_pac >= 2 and np.random.random() < 0.20:
+                    self._pac_state = 1
+                    self._normal_beat_count_pac = 0
+        else:
+            self._pac_state = 0
+
+        # PVC: track state machine transitions
+        if rhythm == RhythmType.PVC:
+            if self._pvc_state == 1:
+                self._pvc_state = 2
+            elif self._pvc_state == 2:
+                rate = state.ectopy_rate
+                if rate > 30.0:  # Bigeminy
+                    self._pvc_state = 1
+                else:
+                    self._pvc_state = 0
+                    self._normal_beat_count_pvc = 0
+            else:  # self._pvc_state == 0
+                rate = state.ectopy_rate
+                if rate > 30.0:  # Bigeminy
+                    self._pvc_state = 1
+                elif rate > 15.0:  # Trigeminy
+                    self._normal_beat_count_pvc += 1
+                    if self._normal_beat_count_pvc >= 1:
+                        self._pvc_state = 1
+                elif rate > 0.0:  # Quadrigeminy
+                    self._normal_beat_count_pvc += 1
+                    if self._normal_beat_count_pvc >= 2:
+                        self._pvc_state = 1
+                else:  # Isolated/Occasional
+                    self._normal_beat_count_pvc += 1
+                    if self._normal_beat_count_pvc >= 3 and np.random.random() < 0.15:
+                        self._pvc_state = 1
+                        self._normal_beat_count_pvc = 0
+        else:
+            self._pvc_state = 0
+            self._normal_beat_count_pvc = 0
 
     def _sample_for_rhythm(self, t: float, params: BeatParams, state: ECGState, rhythm: RhythmType) -> float:
         """Evaluate the sum of Gaussian waves at normalised position t ∈ [0,1]."""
         rhythm = self._coerce_rhythm(rhythm)
 
         # PVC is an ectopic event, not a continuous all-PVC waveform.
-        if rhythm == RhythmType.PVC and self._beat_count % 4 != 2:
-            params = _nsr()
+        if rhythm == RhythmType.PVC:
+            if self._pvc_state != 1:
+                params = _nsr()
 
-        # Wenckebach: every 4th beat has no QRS
-        if rhythm == RhythmType.AVB2_I and self._avb2_counter == 3:
-            # Only P wave (if beat = dropped)
-            rr_sec = self._rr(state, rhythm)
-            pr_sec = state.pr_interval / 1000.0
-            c_r = params.r.center
-            p_offset_sec = -0.12 - pr_sec
-            p_center = c_r + p_offset_sec / rr_sec
-            p_sigma = params.p.sigma / rr_sec if params.p else 0.030 / rr_sec
-            val = 0.0
-            if params.p:
-                val += _gauss(t, Wave(params.p.amp, p_center, p_sigma))
-            return val
+        if rhythm == RhythmType.PAC:
+            if self._pac_state != 1:
+                params = _nsr()
+            else:
+                params = _nsr()
+                # Altered P-wave morphology: inverted, slightly wider
+                params.p = Wave(-0.15, 0.12, 0.030)
+
+        # Wenckebach / Mobitz II: check if current beat in cycle is dropped
+        if rhythm in (RhythmType.AVB2_I, RhythmType.AVB2_II):
+            hr = state.heart_rate
+            if hr >= 70:
+                C = 4
+            elif hr >= 58:
+                C = 3
+            else:
+                C = 2
+            if self._avb2_counter == C - 1:
+                # Only P wave (if beat = dropped)
+                rr_sec = self._rr(state, rhythm)
+                # The P wave should be positioned regularly at the default PR (160 ms for Mobitz I, 180 ms for Mobitz II)
+                pr_sec = 0.160 if rhythm == RhythmType.AVB2_I else 0.180
+                c_r = params.r.center
+                qrs_duration_scale = state.qrs_duration / 80.0
+                q_offset_sec = (params.q.center - c_r) * qrs_duration_scale
+                q_sigma_sec = params.q.sigma * qrs_duration_scale
+                qrs_onset_sec = q_offset_sec - 2 * q_sigma_sec
+                p_offset_sec = qrs_onset_sec - pr_sec + 2 * (params.p.sigma if params.p else 0.024)
+                p_center = c_r + p_offset_sec / rr_sec
+                p_sigma = params.p.sigma / rr_sec if params.p else 0.030 / rr_sec
+                val = 0.0
+                if params.p:
+                    val += _gauss(t, Wave(params.p.amp, p_center, p_sigma))
+                return val
 
         # Get current RR interval in seconds for scaling
         rr_sec = self._rr(state, rhythm)
 
         # Scale QRS (Q, R, S) to have constant width in seconds
         c_r = params.r.center
-        qrs_duration_scale = state.qrs_duration / 80.0
+        if (rhythm == RhythmType.PVC and self._pvc_state == 1) or rhythm == RhythmType.TORSADES:
+            qrs_duration_scale = 1.75  # Force wide QRS (>120 ms)
+        else:
+            qrs_duration_scale = state.qrs_duration / 80.0
         
         q_offset_sec = (params.q.center - c_r) * qrs_duration_scale
         s_offset_sec = (params.s.center - c_r) * qrs_duration_scale
@@ -803,23 +914,47 @@ class WaveformGenerator:
         s_sigma = (params.s.sigma * qrs_duration_scale) / rr_sec
 
         # Scale P wave to honor state.pr_interval and have constant width in seconds
-        if rhythm in (RhythmType.NSR, RhythmType.SINUS_BRADY, RhythmType.SINUS_TACHY):
+        if rhythm == RhythmType.AVB2_I:
+            # Progressive PR interval: 160ms -> 210ms -> 260ms -> dropped
+            pr_ms = 160.0 + 50.0 * self._avb2_counter
+        elif rhythm == RhythmType.AVB2_II:
+            # Constant PR interval: 180ms
+            pr_ms = 180.0
+        elif rhythm == RhythmType.JUNCTIONAL:
+            pr_ms = 40.0
+        elif rhythm == RhythmType.AVB1:
+            pr_ms = max(230.0, state.pr_interval)
+        elif rhythm in (RhythmType.NSR, RhythmType.SINUS_BRADY, RhythmType.SINUS_TACHY):
             pr_ms = 160.0 + (75.0 - state.heart_rate) / 3.0
             pr_ms = max(120.0, min(200.0, pr_ms))
         else:
             pr_ms = state.pr_interval
         pr_sec = pr_ms / 1000.0
 
-        if rhythm == RhythmType.AVB2_I:
-            pr_sec += 0.030 * self._avb2_counter
 
         p_sigma_sec = params.p.sigma if params.p else 0.024
         p_sigma = p_sigma_sec / rr_sec
 
         q_sigma_sec = params.q.sigma * qrs_duration_scale
         qrs_onset_sec = q_offset_sec - 2 * q_sigma_sec
-        p_offset_sec = qrs_onset_sec - pr_sec + 2 * p_sigma_sec
-        p_center = c_r + p_offset_sec / rr_sec
+        if rhythm == RhythmType.AVB2_I:
+            # Keep P wave at a fixed PR interval of 160ms
+            p_offset_sec = qrs_onset_sec - 0.160 + 2 * p_sigma_sec
+            p_center = c_r + p_offset_sec / rr_sec
+            # Shift QRS and T waves to the right by the prolongation
+            delay_sec = (pr_ms - 160.0) / 1000.0
+            delay_phase = delay_sec / rr_sec
+            c_r += delay_phase
+            q_center += delay_phase
+            s_center += delay_phase
+        elif rhythm == RhythmType.AVB2_II:
+            # Keep P wave at a fixed PR interval of 180ms
+            p_offset_sec = qrs_onset_sec - 0.180 + 2 * p_sigma_sec
+            p_center = c_r + p_offset_sec / rr_sec
+            # No shift for QRS/T because PR is constant
+        else:
+            p_offset_sec = qrs_onset_sec - pr_sec + 2 * p_sigma_sec
+            p_center = c_r + p_offset_sec / rr_sec
 
         # Scale T wave to scale with sqrt(rr_sec) (Bazett's formula) and honor state.qt_interval
         if rhythm in (RhythmType.NSR, RhythmType.SINUS_BRADY, RhythmType.SINUS_TACHY):
@@ -838,8 +973,9 @@ class WaveformGenerator:
 
         # AVB3: dissociated P waves
         if rhythm == RhythmType.AVB3:
-            p_phase = (t * 40.0 / 75.0) % 1.0
-            p_val = _gauss(p_phase, Wave(0.12 * p_factor, 0.13, 0.028 / 0.8))
+            t_ac = self._atrial_clock
+            p_phase = (1.25 * t_ac) % 1.0
+            p_val = _gauss(p_phase, Wave(0.12 * p_factor, 0.15, 0.025))
         else:
             p_amp = (params.p.amp * p_factor) if params.p else 0.0
             p_val = _gauss(t, Wave(p_amp, p_center, p_sigma)) if params.p else 0.0
@@ -854,17 +990,23 @@ class WaveformGenerator:
         if rhythm == RhythmType.LBBB:
             extra_center = c_r + (0.08 * qrs_duration_scale) / rr_sec
             extra_sigma = (0.024 * qrs_duration_scale) / rr_sec
-            extra_r_val = _gauss(t, Wave(0.34, extra_center, extra_sigma))
+            extra_r_val = _gauss(t, Wave(0.80, extra_center, extra_sigma))
         elif rhythm == RhythmType.RBBB:
             extra_center = c_r + (0.08 * qrs_duration_scale) / rr_sec
             extra_sigma = (0.018 * qrs_duration_scale) / rr_sec
-            extra_r_val = _gauss(t, Wave(0.48, extra_center, extra_sigma))
+            extra_r_val = _gauss(t, Wave(0.75, extra_center, extra_sigma))
 
-        q_val = _gauss(t, Wave(params.q.amp, q_center, q_sigma))
+        # Modulate entire complex by r_amp_mod for Torsades to rotate around baseline symmetrically
+        q_amp = params.q.amp * r_amp_mod if rhythm == RhythmType.TORSADES else params.q.amp
+        r_amp = params.r.amp * r_amp_mod * self._r_amp_factor * self._qrs_amp_var
+        s_amp = params.s.amp * r_amp_mod if rhythm == RhythmType.TORSADES else params.s.amp
+        t_amp = params.t.amp * r_amp_mod * t_factor * self._t_amp_factor if rhythm == RhythmType.TORSADES else params.t.amp * t_factor * self._t_amp_factor
+
+        q_val = _gauss(t, Wave(q_amp, q_center, q_sigma))
         r_extra_width_scaled = params.qrs_extra_width / rr_sec
-        r_val = _gauss(t, Wave(params.r.amp * r_amp_mod * self._r_amp_factor * self._qrs_amp_var, c_r, r_sigma + r_extra_width_scaled)) + extra_r_val
-        s_val = _gauss(t, Wave(params.s.amp, s_center, s_sigma))
-        t_val = _gauss(t, Wave(params.t.amp * t_factor * self._t_amp_factor, t_center, t_sigma))
+        r_val = _gauss(t, Wave(r_amp, c_r, r_sigma + r_extra_width_scaled)) + extra_r_val
+        s_val = _gauss(t, Wave(s_amp, s_center, s_sigma))
+        t_val = _gauss(t, Wave(t_amp, t_center, t_sigma))
 
         # Create scaled params for ST offset computation
         scaled_params = BeatParams(
@@ -886,24 +1028,41 @@ class WaveformGenerator:
         if rhythm == RhythmType.VF:
             return self._vf_sample()
         if rhythm == RhythmType.ASYSTOLE:
-            return 0.0
+            # Generate subtle physiological monitor noise (under 0.05 mV)
+            t_clk = self._vf_clock
+            self._vf_clock += 1.0 / self.fs
+            if not hasattr(self, '_asystole_drift'):
+                self._asystole_drift = 0.0
+            self._asystole_drift += np.random.normal(0, 0.001)
+            self._asystole_drift = max(-0.015, min(0.015, self._asystole_drift))
+            noise = (
+                self._asystole_drift
+                + 0.004 * np.sin(2 * np.pi * 50.0 * t_clk)
+                + 0.005 * np.random.normal(0, 1.0)
+            )
+            return float(noise)
         sample = self._sample_for_rhythm(t, params, state, rhythm)
         if rhythm == RhythmType.AFIB:
-            # Chaotic, non-periodic fibrillatory waves (f-waves)
+            # Chaotic, non-periodic, continuously evolving fibrillatory waves (f-waves)
             t_ac = self._atrial_clock
-            # Sum of phase-modulated sines for physiological randomness (approx 350-600 bpm atrial activations)
-            f_wave = (
-                0.05 * np.sin(2 * np.pi * 5.8 * t_ac + np.sin(2 * np.pi * 0.8 * t_ac))
-                + 0.04 * np.sin(2 * np.pi * 8.3 * t_ac + np.cos(2 * np.pi * 1.1 * t_ac))
-                + 0.03 * np.sin(2 * np.pi * 11.1 * t_ac)
-                + 0.02 * np.sin(2 * np.pi * 14.7 * t_ac)
+            # Phase noise modulators to disrupt sine repetition
+            phase_noise_1 = 0.25 * np.sin(2 * np.pi * 0.15 * t_ac) + np.random.normal(0, 0.04)
+            phase_noise_2 = 0.20 * np.cos(2 * np.pi * 0.28 * t_ac) + np.random.normal(0, 0.04)
+            # Low frequency amplitude modulator to drift the amplitude realistically
+            amp_mod = 1.0 + 0.12 * np.sin(2 * np.pi * 0.12 * t_ac) + np.random.normal(0, 0.02)
+            
+            f_wave = amp_mod * (
+                0.045 * np.sin(2 * np.pi * 6.2 * t_ac + phase_noise_1)
+                + 0.035 * np.sin(2 * np.pi * 9.1 * t_ac + phase_noise_2)
+                + 0.025 * np.sin(2 * np.pi * 12.8 * t_ac)
+                + 0.015 * np.sin(2 * np.pi * 15.4 * t_ac)
             )
             sample += f_wave
             self._atrial_clock += 1.0 / self.fs
         elif rhythm == RhythmType.AFLUTTER:
-            # Continuous Lead II sawtooth flutter waves
-            # 2:1 conduction means exactly 2 flutter waves per QRS beat (phase t goes 0 -> 1)
-            p_fl = (2.0 * t) % 1.0
+            # Continuous Lead II sawtooth flutter waves at constant 300 bpm (5 Hz)
+            t_ac = self._atrial_clock
+            p_fl = (5.0 * t_ac) % 1.0
             amp_fl = 0.20
             if p_fl < 0.15:
                 # Rapid upstroke
@@ -912,6 +1071,9 @@ class WaveformGenerator:
                 # Nearly linear descending limb
                 fl_val = amp_fl - 2.0 * amp_fl * ((p_fl - 0.15) / 0.85)
             sample += fl_val
+            self._atrial_clock += 1.0 / self.fs
+        elif rhythm == RhythmType.AVB3:
+            self._atrial_clock += 1.0 / self.fs
         return float(sample)
 
     def _transition_mix(self, transition: RhythmTransition) -> float:
@@ -929,14 +1091,50 @@ class WaveformGenerator:
                 return progress
 
     def _vf_sample(self) -> float:
-        value = (
-            0.6 * np.sin(2 * np.pi * 4.5 * self._vf_clock + 0.1) +
-            0.4 * np.sin(2 * np.pi * 6.1 * self._vf_clock + 0.7) +
-            0.3 * np.sin(2 * np.pi * 7.3 * self._vf_clock + 1.2) +
-            0.15 * np.random.randn()
-        )
+        """Generate a chaotic, physiologically realistic VF waveform using dynamic noise."""
+        t = self._vf_clock
         self._vf_clock += 1.0 / self.fs
-        return float(value)
+
+        # Keep track of VF duration to automatically progress Coarse VF -> Fine VF -> Asystole
+        if not hasattr(self, '_vf_duration_samples'):
+            self._vf_duration_samples = 0
+        self._vf_duration_samples += 1
+
+        duration_s = self._vf_duration_samples / self.fs
+
+        # Amplitude decay simulating cardiac arrest progression:
+        # Coarse VF (first 60s): scale = 1.0
+        # Fine VF (60s to 150s): scale decays to 0.15
+        # Asystole (150s to 240s): scale decays to 0.0
+        if duration_s < 60.0:
+            amp_scale = 1.0
+        elif duration_s < 150.0:
+            amp_scale = 1.0 - 0.85 * ((duration_s - 60.0) / 90.0)
+        elif duration_s < 240.0:
+            amp_scale = 0.15 * (1.0 - (duration_s - 150.0) / 90.0)
+        else:
+            amp_scale = 0.0
+
+        # Filtered random walk for phase/frequency perturbation (disrupts periodicity)
+        if not hasattr(self, '_vf_phase_perturbation'):
+            self._vf_phase_perturbation = 0.0
+        self._vf_phase_perturbation += np.random.normal(0, 0.02)
+        self._vf_phase_perturbation = max(-3.0, min(3.0, self._vf_phase_perturbation))
+
+        # Dynamic amplitude modulator (disrupts amplitude uniformity)
+        if not hasattr(self, '_vf_amp_modulator'):
+            self._vf_amp_modulator = 1.0
+        self._vf_amp_modulator += np.random.normal(0, 0.03)
+        self._vf_amp_modulator = max(0.4, min(1.6, self._vf_amp_modulator))
+
+        # Chaotic, non-periodic multi-frequency wave synthesis
+        f_wave = amp_scale * self._vf_amp_modulator * (
+            0.45 * np.sin(2 * np.pi * 4.6 * t + self._vf_phase_perturbation + 1.2 * np.sin(2 * np.pi * 0.7 * t))
+            + 0.30 * np.sin(2 * np.pi * 6.8 * t + 0.8 * np.cos(2 * np.pi * 1.2 * t))
+            + 0.15 * np.sin(2 * np.pi * 9.5 * t + np.random.normal(0, 0.05))
+            + 0.08 * np.sin(2 * np.pi * 12.1 * t)
+        )
+        return float(f_wave)
 
     def _vf(self, n_samples: int) -> np.ndarray:
         """Ventricular fibrillation: chaotic oscillation."""
@@ -956,10 +1154,28 @@ def _gauss(t: float, wave: Wave | None) -> float:
 
 def _st_offset(t: float, params: BeatParams, state: ECGState, rr_sec: float = 1.0) -> float:
     """Add a flat ST offset between S wave and T wave."""
+    from ecg_state import RhythmType
+    if state.rhythm in (RhythmType.ANT_STEMI, RhythmType.INF_STEMI, RhythmType.LAT_STEMI):
+        elevation = state.st_elevation - state.st_depression
+        if elevation == 0.0:
+            elevation = 0.35
+        mid = (params.s.center + params.t.center) / 2.0
+        width = (params.t.center - params.s.center) * 0.45
+        if (params.s.center - params.s.sigma) < t < (params.t.center + params.t.sigma):
+            return elevation * np.exp(-0.5 * ((t - mid) / width) ** 2)
+        return 0.0
+
     st_start = params.s.center + 2 * params.s.sigma
     t_end    = params.t.center + 2 * params.t.sigma
     if st_start < t < t_end:
-        elevation = state.st_elevation - state.st_depression
+        if state.rhythm in (RhythmType.AVB2_I, RhythmType.AVB2_II):
+            elevation = 0.0
+        elif state.rhythm == RhythmType.LBBB:
+            elevation = -0.08 + (state.st_elevation - state.st_depression)
+        elif state.rhythm == RhythmType.RBBB:
+            elevation = -0.06 + (state.st_elevation - state.st_depression)
+        else:
+            elevation = state.st_elevation - state.st_depression
         width = 0.04 / rr_sec
         return elevation * np.exp(-0.5 * ((t - (st_start + t_end) / 2) / width) ** 2)
     return 0.0

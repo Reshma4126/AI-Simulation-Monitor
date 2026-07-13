@@ -79,6 +79,14 @@ class SimulationEngine:
     def clear_json_broadcast(self) -> None:
         self._json_broadcast = None
 
+    def _coerce_rhythm(self, rhythm: RhythmType | str | None) -> RhythmType:
+        try:
+            if rhythm is None:
+                return RhythmType.NSR
+            return RhythmType(rhythm) if not isinstance(rhythm, RhythmType) else rhythm
+        except ValueError:
+            return RhythmType.NSR
+
     # ─── Instructor commands ──────────────────────────────────────────────────
 
     async def apply_command(self, update: ECGStateUpdate) -> None:
@@ -110,18 +118,29 @@ class SimulationEngine:
 
         # Transfer-based params
         if update.heart_rate is not None:
+            requested_hr = update.heart_rate
+            # Snap HR for AFLUTTER
+            active_rhythm = update.rhythm if update.rhythm is not None else state.rhythm
+            if active_rhythm == RhythmType.AFLUTTER:
+                if requested_hr > 120:
+                    requested_hr = 150.0
+                elif requested_hr > 85:
+                    requested_hr = 100.0
+                else:
+                    requested_hr = 75.0
+
             old_hr = state.heart_rate
-            print(f"[Engine] Begin HR transfer: {old_hr:.1f} -> {update.heart_rate:.1f}")
-            await self._log_event("HR_CHANGE", old_hr, update.heart_rate)
+            print(f"[Engine] Begin HR transfer: {old_hr:.1f} -> {requested_hr:.1f}")
+            await self._log_event("HR_CHANGE", old_hr, requested_hr)
             self._transfer.begin(
                 "heart_rate",
                 old_hr,
-                update.heart_rate,
+                requested_hr,
                 state.transfer_time,
                 state.transfer_fn,
             )
             if state.transfer_time <= 0.0 or state.transfer_fn == TransferFn.IMMEDIATE:
-                state.heart_rate = update.heart_rate
+                state.heart_rate = requested_hr
 
         if update.pr_interval is not None:
             begin("pr_interval", state.pr_interval, update.pr_interval)
@@ -182,18 +201,25 @@ class SimulationEngine:
                 state.rhythm = new_rhythm
                 print(f"[Engine] Rhythm changed: {old_rhythm} -> {new_rhythm}")
 
-                # ── Auto-correct HR to be within the new rhythm's valid range ──
-                hr_min, hr_max = get_rhythm_hr_limits(new_rhythm)
-                default_hr = get_rhythm_default_hr(new_rhythm)
+                # ── Auto-correct HR to the default rate for the new rhythm ──
                 current_hr = state.heart_rate
-                if hr_max == 0:
-                    # Asystole — force HR to 0
-                    target_hr = 0.0
-                elif current_hr < hr_min or current_hr > hr_max:
-                    # Current HR outside allowed range — transition to default
-                    target_hr = float(default_hr)
-                else:
-                    target_hr = None  # HR already acceptable, no change needed
+                default_hr = get_rhythm_default_hr(new_rhythm)
+                target_hr = float(default_hr)
+
+                # Reset conduction and ischemia parameters to default if not explicitly updated or required by the rhythm
+                if update.pr_interval is None and new_rhythm != RhythmType.AVB1:
+                    state.pr_interval = 160.0
+                if update.qrs_duration is None and new_rhythm not in (RhythmType.LBBB, RhythmType.RBBB):
+                    state.qrs_duration = 80.0
+                if update.st_elevation is None and new_rhythm not in (RhythmType.ANT_STEMI, RhythmType.INF_STEMI, RhythmType.LAT_STEMI):
+                    state.st_elevation = 0.0
+                if update.st_depression is None and new_rhythm not in (RhythmType.ANT_STEMI, RhythmType.INF_STEMI, RhythmType.LAT_STEMI):
+                    state.st_depression = 0.0
+
+                if new_rhythm == RhythmType.AVB1:
+                    state.pr_interval = 230.0
+                elif new_rhythm in (RhythmType.LBBB, RhythmType.RBBB):
+                    state.qrs_duration = 140.0
 
                 if target_hr is not None and target_hr != current_hr:
                     print(f"[Engine] Auto HR correction: {current_hr:.1f} -> {target_hr:.1f} for {new_rhythm}")
@@ -210,13 +236,16 @@ class SimulationEngine:
                 # Set ischemia zone for STEMI rhythms
                 if new_rhythm == RhythmType.ANT_STEMI:
                     state.ischemia_zone = IschemiaZone.ANTERIOR
-                    state.st_elevation  = max(state.st_elevation, 0.25)
+                    state.st_elevation  = max(state.st_elevation, 0.35)
+                    target_hr = 60.0
                 elif new_rhythm == RhythmType.INF_STEMI:
                     state.ischemia_zone = IschemiaZone.INFERIOR
-                    state.st_elevation  = max(state.st_elevation, 0.25)
+                    state.st_elevation  = max(state.st_elevation, 0.35)
+                    target_hr = 60.0
                 elif new_rhythm == RhythmType.LAT_STEMI:
                     state.ischemia_zone = IschemiaZone.LATERAL
-                    state.st_elevation  = max(state.st_elevation, 0.25)
+                    state.st_elevation  = max(state.st_elevation, 0.35)
+                    target_hr = 60.0
                 else:
                     state.ischemia_zone = IschemiaZone.NONE
                 await self._log_event("RHYTHM_CHANGE", old_rhythm, new_rhythm)
@@ -250,39 +279,43 @@ class SimulationEngine:
         tick_s = PACKET_MS / 1000.0
         while True:
             t0 = asyncio.get_event_loop().time()
+            try:
+                # 1. Tick transfer engine → update state values smoothly
+                self._tick_transfers()
 
-            # 1. Tick transfer engine → update state values smoothly
-            self._tick_transfers()
+                # 2. Generate ECG samples for all leads
+                lead2 = self._generator.generate(self.state, SAMPLES_PER_PKT)
+                all_leads = generate_all_leads(lead2, self.state, SAMPLE_RATE)
+                # Inject artifacts
+                all_leads = {
+                    name: inject(sig, SAMPLE_RATE, self.state)
+                    for name, sig in all_leads.items()
+                }
+                all_leads["PLETH"] = self._generator.generate_pleth(
+                    self.state, SAMPLES_PER_PKT
+                )
+                all_leads["ABP"] = self._generator.generate_abp(
+                    self.state, SAMPLES_PER_PKT
+                )
+                all_leads["PAP"] = self._generator.generate_pap(self.state, SAMPLES_PER_PKT)
+                all_leads["ETCO2"] = self._generator.generate_etco2(self.state, SAMPLES_PER_PKT)
 
-            # 2. Generate ECG samples for all leads
-            lead2 = self._generator.generate(self.state, SAMPLES_PER_PKT)
-            all_leads = generate_all_leads(lead2, self.state, SAMPLE_RATE)
-            # Inject artifacts
-            all_leads = {
-                name: inject(sig, SAMPLE_RATE, self.state)
-                for name, sig in all_leads.items()
-            }
-            all_leads["PLETH"] = self._generator.generate_pleth(
-                self.state, SAMPLES_PER_PKT
-            )
-            all_leads["ABP"] = self._generator.generate_abp(
-                self.state, SAMPLES_PER_PKT
-            )
-            all_leads["PAP"] = self._generator.generate_pap(self.state, SAMPLES_PER_PKT)
-            all_leads["ETCO2"] = self._generator.generate_etco2(self.state, SAMPLES_PER_PKT)
+                # 3. Compute instantaneous HR
+                hr_inst = round(self.state.heart_rate, 1)
 
-            # 3. Compute instantaneous HR
-            hr_inst = round(self.state.heart_rate, 1)
+                # 4. Build and broadcast binary packet
+                packet = _encode_packet(all_leads, hr_inst, self.state)
+                await self._broadcast(packet)
 
-            # 4. Build and broadcast binary packet
-            packet = _encode_packet(all_leads, hr_inst, self.state)
-            await self._broadcast(packet)
-
-            # 5. HR trend logging (every ~1 second)
-            self._hr_log_acc += tick_s
-            if self._hr_log_acc >= 1.0:
-                self._hr_log_acc = 0.0
-                asyncio.create_task(self._log_hr(hr_inst))
+                # 5. HR trend logging (every ~1 second)
+                self._hr_log_acc += tick_s
+                if self._hr_log_acc >= 1.0:
+                    self._hr_log_acc = 0.0
+                    asyncio.create_task(self._log_hr(hr_inst))
+            except Exception as e:
+                import traceback
+                print("[Engine] Error in simulation loop:")
+                traceback.print_exc()
 
             # 6. Maintain tick rate
             elapsed = asyncio.get_event_loop().time() - t0
@@ -301,6 +334,20 @@ class SimulationEngine:
         for p in ["heart_rate", "spo2", "sys_bp", "dia_bp", "pap_sys", "pap_dia", "etco2", "resp_rate", "pr_interval", "qrs_duration", "qt_interval",
                   "st_elevation", "st_depression", "artifact_level", "ectopy_rate"]:
             apply(p)
+
+        # Physiological decay during cardiac arrest (PEA, VF, Asystole)
+        rhythm = self._coerce_rhythm(state.rhythm)
+        if rhythm in (RhythmType.ASYSTOLE, RhythmType.VF, RhythmType.PEA):
+            state.sys_bp = max(0.0, state.sys_bp - 3.0)
+            state.dia_bp = max(0.0, state.dia_bp - 2.0)
+            state.pap_sys = max(0.0, state.pap_sys - 0.8)
+            state.pap_dia = max(0.0, state.pap_dia - 0.5)
+            state.spo2 = max(0.0, state.spo2 - 0.1)
+            if state.etco2 > 10.0:
+                state.etco2 = max(10.0, state.etco2 - 0.2)
+            elif state.etco2 < 10.0:
+                state.etco2 = min(10.0, state.etco2 + 0.2)
+
         # Independent transfers must never cross into an invalid pressure pair.
         if state.dia_bp >= state.sys_bp:
             state.dia_bp = max(0.0, state.sys_bp - 1.0)
