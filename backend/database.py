@@ -13,6 +13,7 @@ MYSQL_PORT = int(os.getenv("MYSQL_PORT", 3306))
 MYSQL_USER = os.getenv("MYSQL_USER", "root")
 MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "")
 DB_NAME = os.getenv("DB_NAME", "imsr")
+MYSQL_SSL = os.getenv("MYSQL_SSL", "true").lower() in ("true", "1", "yes")
 
 # -----------------------------
 # SSL Context for TiDB Cloud
@@ -23,7 +24,7 @@ ssl_ctx = ssl.create_default_context(
         "certs",
         "isrgrootx1.pem"
     )
-)
+) if MYSQL_SSL else None
 
 # Connection pool
 pool = None
@@ -32,6 +33,21 @@ pool = None
 async def init_db():
     """Connect to database and create tables if they don't exist."""
     global pool
+
+    # Create the database if it doesn't exist
+    temp_pool = await aiomysql.create_pool(
+        host=MYSQL_HOST,
+        port=MYSQL_PORT,
+        user=MYSQL_USER,
+        password=MYSQL_PASSWORD,
+        autocommit=True,
+        ssl=ssl_ctx
+    )
+    async with temp_pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(f"CREATE DATABASE IF NOT EXISTS {DB_NAME}")
+    temp_pool.close()
+    await temp_pool.wait_closed()
 
     # Create connection pool
     pool = await aiomysql.create_pool(
