@@ -44,14 +44,14 @@ export default function InstructorParameterModal({
   const ecgRhythm   = useECGStore((s) => s.rhythm);
 
   // ── Local working state (always used; in live-mode mirrors store) ──────────
-  const [localHR, setLocalHR]           = useState(() => initialValues.HR   ?? heartRate);
-  const [localSpO2, setLocalSpO2]       = useState(() => initialValues.SpO2 ?? targetSpO2);
-  const [localSysBP, setLocalSysBP]     = useState(() => initialValues.BP_sys ?? sysBP);
-  const [localDiaBP, setLocalDiaBP]     = useState(() => initialValues.BP_dia ?? diaBP);
-  const [localPapSys, setLocalPapSys]   = useState(() => initialValues.PAP_sys ?? papSys);
-  const [localPapDia, setLocalPapDia]   = useState(() => initialValues.PAP_dia ?? papDia);
-  const [localEtco2, setLocalEtco2]     = useState(() => initialValues.etCO2 ?? targetEtco2);
-  const [localRR, setLocalRR]           = useState(() => initialValues.RR    ?? respRate);
+  const [localHR, setLocalHR]           = useState(() => initialValues.HR   ?? useMonitorStore.getState().HR ?? heartRate);
+  const [localSpO2, setLocalSpO2]       = useState(() => initialValues.SpO2 ?? useMonitorStore.getState().SpO2 ?? targetSpO2);
+  const [localSysBP, setLocalSysBP]     = useState(() => initialValues.BP_sys ?? useMonitorStore.getState().ABP_sys ?? sysBP);
+  const [localDiaBP, setLocalDiaBP]     = useState(() => initialValues.BP_dia ?? useMonitorStore.getState().ABP_dia ?? diaBP);
+  const [localPapSys, setLocalPapSys]   = useState(() => initialValues.PAP_sys ?? useMonitorStore.getState().PAP_sys ?? papSys);
+  const [localPapDia, setLocalPapDia]   = useState(() => initialValues.PAP_dia ?? useMonitorStore.getState().PAP_dia ?? papDia);
+  const [localEtco2, setLocalEtco2]     = useState(() => initialValues.etCO2 ?? useMonitorStore.getState().etCO2 ?? targetEtco2);
+  const [localRR, setLocalRR]           = useState(() => initialValues.RR    ?? useMonitorStore.getState().avRR ?? respRate);
   const [localTblood, setLocalTblood]   = useState(() => initialValues.Tblood ?? useMonitorStore.getState().Tblood ?? 37.0);
   const [localRhythm, setLocalRhythm]   = useState(() => initialValues.rhythm ?? getEngineRhythm(rhythm || ecgRhythm));
   const [localTransferTime, setLocalTransferTime] = useState(transferTime);
@@ -202,7 +202,7 @@ export default function InstructorParameterModal({
   };
 
   const handleRespRateChange = (value) => {
-    const next = Math.min(80, Math.max(0, value));
+    const next = Math.min(40, Math.max(4, value));
     setLocalRR(next);
     liveEmitMonitorParam("avRR", next);
     liveSendVital({ resp_rate: next });
@@ -483,19 +483,51 @@ export default function InstructorParameterModal({
   const renderEtCO2Controls = () => (
     <div className="control-card">
       <h3>Capnography &amp; Respiration</h3>
-      <div className="control-row">
+      <div className="control-row" style={{ marginBottom: "16px" }}>
         <label>
-          <span>EtCO2</span>
+          <span>EtCO2 (mmHg)</span>
           <input type="range" min={0} max={100} value={localEtco2} onChange={(e) => handleEtco2Change(Number(e.target.value))} />
         </label>
         <input type="number" min={0} max={100} value={localEtco2} onChange={(e) => handleEtco2Change(Number(e.target.value))} style={{width:'60px'}}/>
       </div>
-      <div className="control-row">
-        <label>
-          <span>Resp Rate</span>
-          <input type="range" min={0} max={80} value={localRR} onChange={(e) => handleRespRateChange(Number(e.target.value))} />
-        </label>
-        <input type="number" min={0} max={80} value={localRR} onChange={(e) => handleRespRateChange(Number(e.target.value))} style={{width:'60px'}}/>
+      
+      <div className="control-row" style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        <label style={{ fontWeight: "bold" }}>awRR (Airway Respiratory Rate)</label>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <button 
+            type="button" 
+            className="btn-classic btn-sm" 
+            style={{ padding: "4px 12px", fontSize: "14px", fontWeight: "bold" }}
+            onClick={() => handleRespRateChange(localRR - 1)}
+          >
+            −
+          </button>
+          <input 
+            type="number" 
+            min={4} 
+            max={40} 
+            value={localRR} 
+            onChange={(e) => handleRespRateChange(Number(e.target.value))} 
+            style={{ width: "60px", textAlign: "center", padding: "4px", fontSize: "14px" }}
+          />
+          <button 
+            type="button" 
+            className="btn-classic btn-sm" 
+            style={{ padding: "4px 12px", fontSize: "14px", fontWeight: "bold" }}
+            onClick={() => handleRespRateChange(localRR + 1)}
+          >
+            +
+          </button>
+          <span style={{ fontSize: "13px", color: "#888" }}>bpm</span>
+        </div>
+        <input 
+          type="range" 
+          min={4} 
+          max={40} 
+          value={localRR} 
+          onChange={(e) => handleRespRateChange(Number(e.target.value))} 
+          style={{ width: "100%", marginTop: "6px" }}
+        />
       </div>
     </div>
   );

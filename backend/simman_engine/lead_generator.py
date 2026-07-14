@@ -161,14 +161,34 @@ def _build_st_envelope(
 ) -> np.ndarray:
     """
     Build a smoothed envelope that highlights the ST segment.
-    Uses the derivative to locate QRS peaks and builds a shaped window.
+    Uses local maxima to locate QRS peaks and builds a shaped window.
     """
-    from scipy.signal import find_peaks
     if len(lead2) == 0:
         return np.zeros_like(lead2)
 
-    # Find R peaks
-    r_peaks, _ = find_peaks(lead2, height=0.3, distance=int(fs * 0.3))
+    # Find R peaks (pure numpy alternative to scipy.signal.find_peaks)
+    # A peak is where the signal is greater than its neighbors
+    is_max = (lead2[1:-1] > lead2[:-2]) & (lead2[1:-1] > lead2[2:])
+    peaks = np.where(is_max)[0] + 1
+    
+    # Filter by height
+    peaks = peaks[lead2[peaks] >= 0.3]
+    
+    # Filter by distance (at least fs * 0.3 samples apart)
+    distance = int(fs * 0.3)
+    r_peaks = []
+    for peak in peaks:
+        if not r_peaks:
+            r_peaks.append(peak)
+        else:
+            if peak - r_peaks[-1] < distance:
+                # Compare heights, keeping the taller peak
+                if lead2[peak] > lead2[r_peaks[-1]]:
+                    r_peaks[-1] = peak
+            else:
+                r_peaks.append(peak)
+                
+    r_peaks = np.array(r_peaks, dtype=int)
 
     envelope = np.zeros(len(lead2), dtype=np.float32)
     st_window_samples = int(0.12 * fs)   # ~120ms ST region

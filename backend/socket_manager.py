@@ -10,6 +10,75 @@ import aiomysql
 from auth import decode_token
 from database import get_db_pool
 from models import DEFAULT_MONITOR_STATE
+from simman_engine.state_machine import engine
+from ecg_state import ECGStateUpdate, RhythmType
+
+RHYTHM_MAP = {
+    "Normal Sinus Rhythm": RhythmType.NSR,
+    "Sinus Rhythm": RhythmType.NSR,
+    "Sinus Bradycardia": RhythmType.SINUS_BRADY,
+    "Sinus Tachycardia": RhythmType.SINUS_TACHY,
+    "Atrial Fibrillation": RhythmType.AFIB,
+    "Atrial Flutter": RhythmType.AFLUTTER,
+    "Junctional Rhythm": RhythmType.JUNCTIONAL,
+    "1st Degree AV Block": RhythmType.AVB1,
+    "2nd Degree AV Block – Mobitz I": RhythmType.AVB2_I,
+    "2nd Degree AV Block – Mobitz II": RhythmType.AVB2_II,
+    "2nd Degree AV Block": RhythmType.AVB2_II,
+    "3rd Degree AV Block (Complete)": RhythmType.AVB3,
+    "3rd Degree AV Block": RhythmType.AVB3,
+    "Complete Heart Block": RhythmType.AVB3,
+    "Premature Atrial Contractions": RhythmType.PAC,
+    "Premature Ventricular Contractions": RhythmType.PVC,
+    "Supraventricular Tachycardia": RhythmType.SVT,
+    "SVT": RhythmType.SVT,
+    "Ventricular Tachycardia": RhythmType.VT,
+    "Ventricular Fibrillation": RhythmType.VF,
+    "Torsades de Pointes": RhythmType.TORSADES,
+    "Asystole": RhythmType.ASYSTOLE,
+    "Pulseless Electrical Activity": RhythmType.PEA,
+    "PEA": RhythmType.PEA,
+    "Left Bundle Branch Block": RhythmType.LBBB,
+    "Right Bundle Branch Block": RhythmType.RBBB,
+    "Anterior STEMI": RhythmType.ANT_STEMI,
+    "Inferior STEMI": RhythmType.INF_STEMI,
+    "Lateral STEMI": RhythmType.LAT_STEMI,
+    "Paced Rhythm": RhythmType.NSR,
+}
+
+async def _sync_db_state_to_engine(state_dict, is_immediate=False):
+    """Sync monitor state from database/socket dictionary to ECG simulation engine."""
+    engine_updates = {}
+    if "HR" in state_dict:
+        engine_updates["heart_rate"] = float(state_dict["HR"])
+    if "SpO2" in state_dict:
+        engine_updates["spo2"] = float(state_dict["SpO2"])
+    if "ABP_sys" in state_dict:
+        engine_updates["sys_bp"] = float(state_dict["ABP_sys"])
+    if "ABP_dia" in state_dict:
+        engine_updates["dia_bp"] = float(state_dict["ABP_dia"])
+    if "PAP_sys" in state_dict:
+        engine_updates["pap_sys"] = float(state_dict["PAP_sys"])
+    if "PAP_dia" in state_dict:
+        engine_updates["pap_dia"] = float(state_dict["PAP_dia"])
+    if "avRR" in state_dict:
+        engine_updates["resp_rate"] = float(state_dict["avRR"])
+    if "etCO2" in state_dict:
+        engine_updates["etco2"] = float(state_dict["etCO2"])
+    if "rhythm" in state_dict:
+        engine_updates["rhythm"] = RHYTHM_MAP.get(state_dict["rhythm"], RhythmType.NSR)
+
+    if engine_updates:
+        if is_immediate:
+            engine_updates["transfer_time"] = 0.0
+            engine_updates["transfer_fn"] = "IMMEDIATE"
+        try:
+            update_obj = ECGStateUpdate(**engine_updates)
+            await engine.apply_command(update_obj)
+        except Exception as e:
+            print(f"[SocketManager] Failed to apply state sync to engine: {e}")
+
+
 
 # Create async Socket.IO server
 sio = socketio.AsyncServer(
@@ -296,6 +365,7 @@ async def join_session(sid, data):
                 state = json.loads(state_row["state_data"])
                 state["started_at"] = session["started_at"].isoformat() if session["started_at"] else datetime.utcnow().isoformat()
                 await sio.emit("state_update", state, to=sid)
+                await _sync_db_state_to_engine(state, is_immediate=True)
 
             # If session has current_scenario_id, fetch and send it
             await cur.execute("SELECT current_scenario_id FROM sessions WHERE id = %s", (session["id"],))
@@ -602,6 +672,7 @@ async def select_scenario(sid, data):
     await sio.emit("state_update", state, room=session_code)
     await sio.emit("alarm_update", {"alarms": state["alarms"]}, room=session_code)
     await emit_scenario_selected(session_code, scenario)
+    await _sync_db_state_to_engine(updates, is_immediate=True)
 
 
 @sio.event
@@ -681,6 +752,7 @@ async def apply_all_settings(sid, data):
 
     await sio.emit("state_update", state, room=session_code)
     await sio.emit("alarm_update", {"alarms": state["alarms"]}, room=session_code)
+    await _sync_db_state_to_engine(data)
 
     # If rhythm/HR changed, broadcast rhythm_change
     if any(k in data for k in ["rhythm", "extrasystole", "HR", "ecg_lead", "artifact_electrical", "artifact_muscular", "emd_pea"]):

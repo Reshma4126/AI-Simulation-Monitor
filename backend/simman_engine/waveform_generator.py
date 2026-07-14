@@ -372,10 +372,11 @@ class WaveformGenerator:
         self._last_rr_factors = rr_factors
 
         # Pre-calculate continuous respiratory phase array for synchronization across all waveforms
+        resp_freq = state.resp_rate / 60.0 if state.resp_rate > 0.0 else 0.20
         resp_phases = np.zeros(n_samples, dtype=np.float32)
         for i in range(n_samples):
             resp_phases[i] = self._resp_wander_phase
-            self._resp_wander_phase += 0.20 / self.fs
+            self._resp_wander_phase += resp_freq / self.fs
             if self._resp_wander_phase >= 1.0:
                 self._resp_wander_phase -= 1.0
         self._last_resp_phases = resp_phases
