@@ -5,6 +5,7 @@ import { useRef, useEffect } from "react";
 import { useECGStore } from "../../store/ecgStore";
 import type { LeadName, Severity } from "../../types/ecgState";
 import { SAMPLE_RATE } from "../../types/wsProtocol";
+import audioEngine from "../../engine/audioEngine";
 import "./ECGTrack.css";
 
 interface Props {
@@ -35,6 +36,7 @@ export default function ECGTrack({ lead, width = 900, height = 220, paperSpeed =
   const rafRef     = useRef<number>(0);
   const prevHead   = useRef<number>(-1);
   const xDrawRef   = useRef<number>(0);
+  const lastBeepTimeRef = useRef<number>(0);
 
   const bufferRef    = useECGStore.getState().buffer;
   const severityRef  = useRef<Severity>("normal");
@@ -137,6 +139,15 @@ export default function ECGTrack({ lead, width = 900, height = 220, paperSpeed =
         const mv   = buf[idx];
         const y    = baseline - mv / mVperPx;
         const clampY = Math.max(4, Math.min(height - 4, y));
+
+        // R-Wave Peak Detection for Beep
+        if (mv > 0.5) {
+          const now = Date.now();
+          if (now - lastBeepTimeRef.current > 250) { // 250ms debounce
+            audioEngine.beep();
+            lastBeepTimeRef.current = now;
+          }
+        }
 
         // Eraser sweep (clearRect on transparent foreground)
         const eraseX = (xPos + 10) % width;

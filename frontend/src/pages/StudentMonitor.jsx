@@ -5,8 +5,9 @@ import useMonitorStore from "../store/monitorStore";
 import { connect, disconnect } from "../engine/wsClient";
 import AlarmBar from "../components/monitor/AlarmBar";
 import EyesPanel from "../components/monitor/EyesPanel";
-import VitalsPanel from "../components/monitor/VitalsPanel";
+import MonitorParameters from "../components/monitor/MonitorParameters";
 import WaveformStack from "../components/monitor/WaveformStack";
+import audioEngine from "../engine/audioEngine";
 
 // InlineReadings displays vitals horizontally above the canvas (retained as unused helper or clean up)
 function InlineReadings() {
@@ -77,6 +78,28 @@ export default function StudentMonitor() {
   const [joinStatus, setJoinStatus] = useState("joining"); // "joining" | "joined" | "error"
   const [joinError, setJoinError] = useState("");
   const [scenario, setScenario] = useState(null);
+  const [alarmMuted, setAlarmMuted] = useState(false);
+  const [nibpRunning, setNibpRunning] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [audioEnabled, setAudioEnabled] = useState(false);
+
+  const alarms = useMonitorStore((s) => s.alarms) || [];
+
+  // Audio System Alarms hook
+  useEffect(() => {
+    if (alarmMuted) {
+      audioEngine.setCritical(false);
+      audioEngine.setWarning(false);
+      return;
+    }
+
+    const safeAlarms = Array.isArray(alarms) ? alarms : [];
+    const hasCritical = safeAlarms.some(a => a?.severity === 'critical' || a?.level === 'critical' || a?.message?.toLowerCase().includes('critical') || a?.message?.toLowerCase().includes('arrest') || a?.message?.toLowerCase().includes('fib'));
+    const hasWarning = safeAlarms.length > 0 && !hasCritical;
+
+    audioEngine.setCritical(hasCritical);
+    audioEngine.setWarning(hasWarning);
+  }, [alarms, alarmMuted]);
 
   useEffect(() => {
     const token = sessionStorage.getItem("token");
@@ -188,139 +211,177 @@ export default function StudentMonitor() {
     );
   }
 
-  // Helper to render patient details (no initial_readings for students)
-  const renderScenarioCard = () => {
-    if (!scenario) return null;
-    const pd = typeof scenario.patient_details === "string"
-      ? JSON.parse(scenario.patient_details)
-      : scenario.patient_details;
-    const symp = typeof scenario.symptoms === "string"
-      ? JSON.parse(scenario.symptoms)
-      : scenario.symptoms;
+  const handleAlarmSilence = () => {
+    audioEngine.init();
+    if (!alarmMuted) {
+      setAlarmMuted(true);
+      audioEngine.muteAlarms(true);
+      // 2 minute silence
+      setTimeout(() => {
+        setAlarmMuted(false);
+        audioEngine.muteAlarms(false);
+      }, 120000);
+    } else {
+      setAlarmMuted(false);
+      audioEngine.muteAlarms(false);
+    }
+  };
 
-    const activeSymptoms = symp ? Object.entries(symp).filter(([, v]) => v === true) : [];
+  const handleMonitorClick = () => {
+    if (!audioEnabled) {
+      audioEngine.init();
+      setAudioEnabled(true);
+    }
+  };
 
-    return (
-      <div className="student-scenario-card">
-        <h4 className="student-scenario-title">📋 Case Scenario</h4>
-        <div className="student-scenario-body">
-          <div className="student-scenario-details">
-            <div className="scenario-detail-row">
-              <span className="scenario-detail-label">Patient</span>
-              <span className="scenario-detail-value">{pd?.patientName}</span>
-            </div>
-            <div className="scenario-detail-row">
-              <span className="scenario-detail-label">Age / Gender</span>
-              <span className="scenario-detail-value">{pd?.age} / {pd?.gender}</span>
-            </div>
-            <div className="scenario-detail-row">
-              <span className="scenario-detail-label">Blood Group</span>
-              <span className="scenario-detail-value">{pd?.bloodGroup}</span>
-            </div>
-            <div className="scenario-detail-row">
-              <span className="scenario-detail-label">Height / Weight</span>
-              <span className="scenario-detail-value">{pd?.heightCm}cm / {pd?.weightKg}kg</span>
-            </div>
-            <div className="scenario-detail-row">
-              <span className="scenario-detail-label">Complaint</span>
-              <span className="scenario-detail-value">{pd?.chiefComplaint}</span>
-            </div>
-            <div className="scenario-detail-row">
-              <span className="scenario-detail-label">Diagnosis</span>
-              <span className="scenario-detail-value">{pd?.diagnosis}</span>
-            </div>
-            {pd?.medicalHistory && pd.medicalHistory.length > 0 && (
-              <div className="scenario-detail-row">
-                <span className="scenario-detail-label">History</span>
-                <span className="scenario-detail-value">{pd.medicalHistory.join(", ")}</span>
-              </div>
-            )}
-            <div className="scenario-detail-row">
-              <span className="scenario-detail-label">Triage</span>
-              <span className="scenario-detail-value" style={{
-                color: pd?.triageLevel === "Emergency" ? "#ff4444" : "#ffaa00"
-              }}>{pd?.triageLevel}</span>
-            </div>
-          </div>
-          {activeSymptoms.length > 0 && (
-            <div className="student-scenario-symptoms">
-              <span className="scenario-detail-label" style={{ marginBottom: 4 }}>Symptoms</span>
-              <div className="scenario-symptoms-list">
-                {activeSymptoms.map(([key]) => (
-                  <span key={key} className="scenario-symptom-tag">
-                    {key.replace(/([A-Z])/g, " $1").trim()}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
+  const handleNIBPToggle = () => {
+    if (!audioEnabled) {
+      audioEngine.init();
+      setAudioEnabled(true);
+    }
+    setNibpRunning(!nibpRunning);
   };
 
   return (
-    <div className="student-monitor">
-      <AlarmBar />
-      <div className="monitor-main">
-        {/* Left: readings values */}
-        <div className="student-vitals-left">
-          <VitalsPanel onVitalClick={null} compact={false} isStudent={true} />
+    <div className="student-monitor-layout" onClick={handleMonitorClick}>
+      {!audioEnabled && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 9999,
+          display: 'flex', justifyContent: 'center', alignItems: 'center',
+          flexDirection: 'column', color: '#00ccff', cursor: 'pointer'
+        }}>
+          <h1 style={{fontSize: '48px', marginBottom: '20px'}}>Click Anywhere to Start Monitor</h1>
+          <p style={{fontSize: '24px'}}>Audio is disabled until interaction</p>
         </div>
+      )}
+      {/* Top Status Bar */}
+      <div className="monitor-top-bar">
+        <div>
+          Adult
+        </div>
+        <div>
+          {new Date().toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric'})} {new Date().toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'})}
+        </div>
+        <div>
+          5wave
+        </div>
+      </div>
+      
+      {/* Alarm Bar (Absolute or integrated into top) */}
+      <div style={{ position: 'relative', width: '100%', zIndex: 10 }}>
+         <AlarmBar />
+      </div>
 
-        {/* Center: waveforms */}
-        <div className="student-waveforms-center waveform-container">
+      <div className="monitor-main-content">
+        {/* Left: waveforms */}
+        <div className="monitor-waveforms-section">
           <WaveformStack lead="II" />
         </div>
 
-        {/* Right: scenario card */}
-        <div className="student-monitor-right">
-          {renderScenarioCard()}
+        {/* Right: parameters */}
+        <div className="monitor-parameters-section">
+          <MonitorParameters />
         </div>
       </div>
+
+      {/* Bottom Control Bar */}
+      <div className="monitor-bottom-bar">
+        <button className={`monitor-btn ${alarmMuted ? 'active' : ''}`} onClick={handleAlarmSilence}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+             <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+             {alarmMuted ? <line x1="23" y1="9" x2="17" y2="15"></line> : <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>}
+             {alarmMuted && <line x1="17" y1="9" x2="23" y2="15"></line>}
+          </svg>
+          {alarmMuted ? "Alarm Muted" : "Silence Alarm"}
+        </button>
+        <button className="monitor-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          Start Stop
+        </button>
+        <button className={`monitor-btn ${nibpRunning ? 'active' : ''}`} onClick={handleNIBPToggle}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          {nibpRunning ? "NBP Running..." : "NBP Start/Stop"}
+        </button>
+        <button className="monitor-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+            <path d="M2 12h20"></path>
+          </svg>
+          Zero Press
+        </button>
+        <button className="monitor-btn">
+           Cardiac Output
+        </button>
+        <button className="monitor-btn">
+           Wedge
+        </button>
+        <button className="monitor-btn">
+           TOF
+        </button>
+        <button className="monitor-btn">
+           Graph Trends
+        </button>
+        <button className="monitor-btn" onClick={() => { audioEngine.init(); setChatOpen(!chatOpen); }}>
+           Messages {comments.length > 0 && `(${comments.length})`}
+        </button>
+        <button className="monitor-btn" style={{backgroundColor: '#0000FF', color: 'white'}} onClick={() => audioEngine.init()}>
+           Main Screen
+        </button>
+      </div>
+
       <EyesPanel editable={false} />
 
-      {/* Faculty Comments Box — bottom right */}
+      {/* Faculty Comments Drawer */}
       <div style={{
         position: "fixed",
-        bottom: 20,
-        right: 20,
+        top: 24, // below top bar
+        right: chatOpen ? 0 : -320,
         width: 320,
-        maxHeight: 240,
-        overflowY: "auto",
-        backgroundColor: "rgba(10,10,20,0.92)",
+        height: "calc(100vh - 24px - 48px)", // above bottom bar
+        backgroundColor: "#1f1f1f",
         color: "white",
         padding: "12px 14px",
-        borderRadius: "10px",
-        border: "1px solid rgba(0,200,255,0.25)",
-        boxShadow: "0 4px 16px rgba(0,0,0,0.6)",
+        borderLeft: "2px solid #333",
+        boxShadow: "-4px 0 16px rgba(0,0,0,0.5)",
         zIndex: 1000,
         fontFamily: "Inter, sans-serif",
+        transition: "right 0.3s ease",
+        display: "flex",
+        flexDirection: "column"
       }}>
-        <h4 style={{
-          margin: "0 0 10px 0", fontSize: "11px",
-          textTransform: "uppercase", letterSpacing: "1.5px", color: "#00ccff"
-        }}>
-          📢 Instructor Messages
-        </h4>
-        {comments.length === 0 && (
-          <div style={{ fontSize: "12px", color: "#555", fontStyle: "italic" }}>No messages yet</div>
-        )}
-        {comments.map((c, i) => (
-          <div key={i} style={{
-            marginBottom: "8px",
-            fontSize: "13px",
-            background: "rgba(0,200,255,0.07)",
-            borderLeft: "3px solid #00ccff",
-            padding: "6px 8px",
-            borderRadius: "4px",
-          }}>
-            <div style={{ color: "#aaa", fontSize: "10px", marginBottom: "2px" }}>
-              {c.from || "Instructor"} · {c.timestamp ? new Date(c.timestamp).toLocaleTimeString() : ""}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+          <h4 style={{ margin: 0, fontSize: "11px", textTransform: "uppercase", letterSpacing: "1.5px", color: "#00ccff" }}>
+            📢 Instructor Messages
+          </h4>
+          <button onClick={() => setChatOpen(false)} style={{ background: "transparent", border: "none", color: "white", cursor: "pointer", fontSize: "16px" }}>✕</button>
+        </div>
+        <div style={{ flex: 1, overflowY: "auto" }}>
+          {comments.length === 0 && (
+            <div style={{ fontSize: "12px", color: "#555", fontStyle: "italic" }}>No messages yet</div>
+          )}
+          {comments.map((c, i) => (
+            <div key={i} style={{
+              marginBottom: "8px",
+              fontSize: "13px",
+              background: "rgba(0,200,255,0.07)",
+              borderLeft: "3px solid #00ccff",
+              padding: "6px 8px",
+              borderRadius: "4px",
+            }}>
+              <div style={{ color: "#aaa", fontSize: "10px", marginBottom: "2px" }}>
+                {c.from || "Instructor"} · {c.timestamp ? new Date(c.timestamp).toLocaleTimeString() : ""}
+              </div>
+              <div>{c.comment}</div>
             </div>
-            <div>{c.comment}</div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );

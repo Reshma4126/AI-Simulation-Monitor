@@ -11,3 +11,4 @@ pydantic-settings==2.3.4
 python-dotenv>=1.0
 numpy==1.26.4
 certifi
+scipy

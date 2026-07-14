@@ -23,9 +23,14 @@ export default function WaveformStack({ lead = "II" }) {
     if (!element) return undefined;
 
     const readSize = () => {
-      setSize({
-        width: Math.floor(element.clientWidth),
-        height: Math.floor(element.clientHeight),
+      const w = Math.floor(element.clientWidth);
+      const h = Math.floor(element.clientHeight);
+      setSize((prev) => {
+        // Ignore minor sub-pixel or 1px jitter to prevent infinite re-render loops
+        if (Math.abs(prev.width - w) > 2 || Math.abs(prev.height - h) > 2) {
+          return { width: w, height: h };
+        }
+        return prev;
       });
     };
 
