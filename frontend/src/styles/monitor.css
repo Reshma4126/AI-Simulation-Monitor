@@ -1,0 +1,126 @@
+/* ==========================================================================
+   OLD AI SIMULATION MONITOR STYLES — ISOLATED MONITORS ONLY
+   ========================================================================== */
+
+/* Monitor Color Variables */
+.instructor-dashboard,
+.student-monitor {
+  --void: #000000;
+  --surface: #131313;
+  --surface-dim: #0e0e0e;
+  --surface-container: #1f1f1f;
+  --surface-container-high: #2a2a2a;
+  --surface-container-highest: #353535;
+  --on-surface: #e2e2e2;
+  --on-surface-muted: #888888;
+  --outline: #84967e;
+  --outline-variant: #3b4b38;
+
+  --primary: #1a56db;
+  --primary-dim: #1e40af;
+  --primary-container: #1e3a8a;
+  --on-primary: #ffffff;
+
+  --ecg-green: #00FF00;
+  --spo2-yellow: #FFFF00;
+  --abp-red: #FF3333;
+  --pap-orange: #FF9900;
+  --co2-cyan: #00CCFF;
+  --temp-purple: #CC99FF;
+  --co-pink: #FF66CC;
+
+  --alarm-red: #cc0000;
+  --alarm-yellow: #ffcc00;
+  --alarm-gold: #DAA520;
+
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-ui: 'Inter', sans-serif;
+
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #131313;
+  color: #e2e2e2;
+  font-family: var(--font-ui);
+}
+
+/* Student Monitor */
+.student-monitor {
+  background: var(--void);
+}
+
+.student-monitor .monitor-main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Instructor Dashboard Topbar */
+.instructor-dashboard .instructor-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background: #1f1f1f;
+  border-bottom: 1px solid #3b4b38;
+  flex-shrink: 0;
+}
+
+.instructor-dashboard .topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.instructor-dashboard .topbar-title {
+  font-size: 15px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: #1a56db;
+}
+
+.instructor-dashboard .topbar-role {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  background: rgba(0,255,68,0.12);
+  color: #00FF44;
+  padding: 2px 8px;
+}
+
+/* Vitals Panel */
+.vitals-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: #000000;
+  padding: 4px;
+  overflow-y: auto;
+}
+
+.vital-brick {
+  background: #0a0a0a;
+  border: 1px solid #1a1a1a;
+  padding: 6px 10px;
+  flex-shrink: 0;
+}
+
+.vital-brick-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+/* Alarm Bar */
+.alarm-bar {
+  display: flex;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #1a0000;
+  min-height: 32px;
+}

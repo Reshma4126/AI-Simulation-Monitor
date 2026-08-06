@@ -1,0 +1,47 @@
+/* ==========================================================================
+   MEDSIM AI — ENTERPRISE CSS VARIABLES & TOKENS
+   ========================================================================== */
+
+:root {
+  /* Brand Medical Theme */
+  --primary: #0F766E;
+  --primary-hover: #0D9488;
+  --primary-light: #F0FDFA;
+  --primary-border: #CCFBF1;
+  --primary-shadow: rgba(15, 118, 110, 0.18);
+
+  /* Backgrounds & Surface Colors */
+  --background: #F8FAFC;
+  --surface: #FFFFFF;
+  --surface-alt: #F1F5F9;
+  
+  /* Borders */
+  --border: #E2E8F0;
+  --border-subtle: #F1F5F9;
+
+  /* Typography Colors */
+  --text-main: #0F172A;
+  --text-body: #475569;
+  --text-muted: #64748B;
+  --text-placeholder: #94A3B8;
+
+  /* Status Colors */
+  --status-success-bg: #ECFDF5;
+  --status-success-text: #059669;
+  --status-warning-bg: #FFFBEB;
+  --status-warning-text: #D97706;
+  --status-danger-bg: #FEF2F2;
+  --status-danger-text: #DC2626;
+
+  /* Elevation & Shadows */
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.06);
+  --shadow-lg: 0 12px 28px -4px rgba(15, 118, 110, 0.15);
+
+  /* Radii & Transitions */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+  --transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}

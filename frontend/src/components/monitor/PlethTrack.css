@@ -1,0 +1,27 @@
+/* src/components/monitor/PlethTrack.css */
+.pleth-track {
+  position: relative;
+  background: #0c141a;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.pleth-track canvas {
+  display: block;
+}
+.pleth-track__label {
+  position: absolute;
+  top: 8px; left: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(0,255,255,0.8);
+  z-index: 2;
+  text-shadow: 0 0 8px rgba(0,255,255,0.5);
+}
+.pleth-track__speed {
+  position: absolute;
+  bottom: 6px; left: 10px;
+  font-size: 10px;
+  color: rgba(255,255,255,0.2);
+  font-family: 'JetBrains Mono', monospace;
+}

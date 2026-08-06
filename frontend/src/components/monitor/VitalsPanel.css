@@ -1,0 +1,63 @@
+/* src/components/monitor/VitalsPanel.css */
+.vitals-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 16px;
+  background: #0d1117;
+  border-left: 1px solid #1e2d3d;
+  min-width: 200px;
+  height: 100%;
+}
+.vitals-panel__status { display: flex; align-items: center; gap: 8px; }
+.conn-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  flex-shrink: 0;
+}
+.conn-dot--on  { background: #2dba4e; box-shadow: 0 0 8px #2dba4e; animation: blink 2s ease infinite; }
+.conn-dot--off { background: #4a5568; }
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:.4} }
+.conn-label { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; color: var(--text-muted); }
+
+.vitals-panel__hr {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.vitals-panel__hr-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+.vitals-panel__hr-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 64px;
+  font-weight: 700;
+  line-height: 1;
+  transition: color 0.5s;
+}
+.vitals-panel__hr-value--normal   { color: #2dba4e; text-shadow: 0 0 20px rgba(45,186,78,0.5); }
+.vitals-panel__hr-value--warning  { color: #e3a008; text-shadow: 0 0 20px rgba(227,160,8,0.5); }
+.vitals-panel__hr-value--critical { color: #f85149; text-shadow: 0 0 20px rgba(248,81,73,0.6); animation: pulse-crit 1.2s ease infinite; }
+.vitals-panel__hr-unit { font-size: 12px; color: var(--text-muted); }
+
+.vitals-panel__rhythm {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.vitals-panel__rhythm-name {
+  font-size: 13px; color: var(--text-primary); line-height: 1.3;
+}
+
+.vitals-panel__pressure {
+  color: #f0f3f6;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.vitals-panel__label--pap,
+.vitals-panel__pressure--pap {
+  color: #ffd43b;
+}

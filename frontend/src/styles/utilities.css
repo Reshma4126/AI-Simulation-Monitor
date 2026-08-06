@@ -1,0 +1,15 @@
+/* ==========================================================================
+   MEDSIM AI — UTILITY HELPERS
+   ========================================================================== */
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.text-truncated {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
