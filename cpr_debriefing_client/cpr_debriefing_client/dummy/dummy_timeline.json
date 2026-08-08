@@ -1,0 +1,405 @@
+{
+  "metadata": {
+    "session_id": "SES-001",
+    "date": "2026-04-29",
+    "scenario_name": "Adult VF Arrest",
+    "scenario_type": "VF",
+    "team_leader_id": "TL-001",
+    "team_leader_name": "Dr. Priya Ramesh",
+    "team_size": 4,
+    "duration_ms": 872000,
+    "guideline_version": "AHA_2020"
+  },
+  "events": [
+    {
+      "event_id": "evt_001",
+      "timestamp_ms": 0,
+      "event_type": "session_start",
+      "source_systems": [
+        "manual"
+      ],
+      "actor_role": "unknown",
+      "value": {},
+      "confidence": 1.0,
+      "evidence": [
+        {
+          "source": "manual",
+          "ref": "instructor_trigger_start",
+          "text": "Scenario started by instructor"
+        }
+      ]
+    },
+    {
+      "event_id": "evt_002",
+      "timestamp_ms": 5000,
+      "event_type": "arrest_recognized",
+      "source_systems": [
+        "ceiling_audio"
+      ],
+      "actor_role": "team_leader",
+      "value": {},
+      "confidence": 0.88,
+      "evidence": [
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_003",
+          "text": "we have a cardiac arrest, starting CPR now"
+        }
+      ]
+    },
+    {
+      "event_id": "evt_003",
+      "timestamp_ms": 8200,
+      "event_type": "cpr_initiated",
+      "source_systems": [
+        "ceiling_audio"
+      ],
+      "actor_role": "compressor",
+      "value": {
+        "compression_rate": 112,
+        "compression_depth_cm": 5.2,
+        "recoil": true
+      },
+      "confidence": 0.9,
+      "evidence": [
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_004",
+          "text": "rhythmic compression sounds detected"
+        },
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_004",
+          "text": "Starting compressions now"
+        }
+      ]
+    },
+    {
+      "event_id": "evt_004",
+      "timestamp_ms": 102000,
+      "event_type": "rhythm_check",
+      "source_systems": [
+        "ceiling_audio"
+      ],
+      "actor_role": "team_leader",
+      "value": {
+        "rhythm": "VF",
+        "pause_duration_ms": 8000
+      },
+      "confidence": 0.92,
+      "evidence": [
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_022",
+          "text": "stopping CPR, checking rhythm"
+        },
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_022",
+          "text": "compression sounds ceased — rhythm check pause detected"
+        }
+      ]
+    },
+    {
+      "event_id": "evt_005",
+      "timestamp_ms": 102000,
+      "event_type": "shock_delivered",
+      "source_systems": [
+        "ceiling_audio"
+      ],
+      "actor_role": "team_leader",
+      "value": {
+        "energy_joules": 200,
+        "rhythm_pre": "VF"
+      },
+      "confidence": 0.94,
+      "evidence": [
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_025",
+          "text": "clear, shocking now"
+        },
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_025",
+          "text": "defibrillator discharge audio spike detected"
+        }
+      ]
+    },
+    {
+      "event_id": "evt_006",
+      "timestamp_ms": 252000,
+      "event_type": "cpr_paused",
+      "source_systems": [
+        "ceiling_audio"
+      ],
+      "actor_role": "unknown",
+      "value": {
+        "pause_duration_ms": 28000
+      },
+      "confidence": 0.88,
+      "evidence": [
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_038",
+          "text": "28-second silence window — no compression sounds detected"
+        }
+      ]
+    },
+    {
+      "event_id": "evt_007",
+      "timestamp_ms": 350000,
+      "event_type": "drug_administered",
+      "source_systems": [
+        "ceiling_audio"
+      ],
+      "actor_role": "team_leader",
+      "value": {
+        "drug": "epinephrine",
+        "dose_mg": 1,
+        "route": "IV",
+        "order_complete": false
+      },
+      "confidence": 0.82,
+      "evidence": [
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_041",
+          "text": "give epinephrine"
+        },
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_042",
+          "text": "drug administered — no dose/route readback heard"
+        }
+      ]
+    },
+    {
+      "event_id": "evt_008",
+      "timestamp_ms": 645000,
+      "event_type": "rosc_achieved",
+      "source_systems": [
+        "ceiling_audio"
+      ],
+      "actor_role": "unknown",
+      "value": {
+        "rhythm_post": "NSR"
+      },
+      "confidence": 0.92,
+      "evidence": [
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_089",
+          "text": "we have a pulse — ROSC achieved"
+        },
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_089",
+          "text": "exclamation and positive team response detected"
+        }
+      ]
+    }
+  ],
+  "conversation": [
+    {
+      "timestamp_ms": 0,
+      "time": "00:00",
+      "text": "Scenario start."
+    },
+    {
+      "timestamp_ms": 3000,
+      "time": "00:03",
+      "text": "Doctor, patient collapsed, no response!"
+    },
+    {
+      "timestamp_ms": 5000,
+      "time": "00:05",
+      "text": "We have a cardiac arrest. Starting CPR now. Someone call the code."
+    },
+    {
+      "timestamp_ms": 8200,
+      "time": "00:08",
+      "text": "Starting compressions now."
+    },
+    {
+      "timestamp_ms": 15000,
+      "time": "00:15",
+      "text": "Code blue called. Defib on the way."
+    },
+    {
+      "timestamp_ms": 30000,
+      "time": "00:30",
+      "text": "Pads are on."
+    },
+    {
+      "timestamp_ms": 45000,
+      "time": "00:45",
+      "text": "Rhythm check in 30 seconds."
+    },
+    {
+      "timestamp_ms": 100000,
+      "time": "01:40",
+      "text": "Everyone stop — checking rhythm."
+    },
+    {
+      "timestamp_ms": 102000,
+      "time": "01:42",
+      "text": "VF confirmed."
+    },
+    {
+      "timestamp_ms": 104000,
+      "time": "01:44",
+      "text": "Charging to 200 joules. Stand clear!"
+    },
+    {
+      "timestamp_ms": 108000,
+      "time": "01:48",
+      "text": "Clear! Shocking now."
+    },
+    {
+      "timestamp_ms": 110000,
+      "time": "01:50",
+      "text": "[Shock delivered — 200J]"
+    },
+    {
+      "timestamp_ms": 112000,
+      "time": "01:52",
+      "text": "Resume CPR immediately."
+    },
+    {
+      "timestamp_ms": 114000,
+      "time": "01:54",
+      "text": "Compressions resumed."
+    },
+    {
+      "timestamp_ms": 200000,
+      "time": "03:20",
+      "text": "Compressor rotation — fresh compressor taking over."
+    },
+    {
+      "timestamp_ms": 345000,
+      "time": "05:45",
+      "text": "Nurse, give epinephrine 1 milligram IV."
+    },
+    {
+      "timestamp_ms": 350000,
+      "time": "05:50",
+      "text": "Epinephrine 1 mg IV — understood. Giving now."
+    },
+    {
+      "timestamp_ms": 355000,
+      "time": "05:55",
+      "text": "Epinephrine 1 mg IV administered."
+    },
+    {
+      "timestamp_ms": 400000,
+      "time": "06:40",
+      "text": "Let's consider reversible causes — Hs and Ts."
+    },
+    {
+      "timestamp_ms": 640000,
+      "time": "10:40",
+      "text": "Wait — I feel a pulse!"
+    },
+    {
+      "timestamp_ms": 645000,
+      "time": "10:45",
+      "text": "ROSC! We have return of spontaneous circulation!"
+    },
+    {
+      "timestamp_ms": 650000,
+      "time": "10:50",
+      "text": "Post-ROSC care — titrate oxygen, 12-lead ECG, temperature management."
+    }
+  ],
+  "clinical_timeline": [
+    {
+      "index": 1,
+      "timestamp_ms": 0,
+      "time": "00:00",
+      "event_type": "session_start",
+      "label": "Session Started",
+      "actor": "unknown",
+      "source": "manual",
+      "confidence": 1.0,
+      "note": "Scenario initiated by instructor"
+    },
+    {
+      "index": 2,
+      "timestamp_ms": 5000,
+      "time": "00:05",
+      "event_type": "arrest_recognized",
+      "label": "Arrest Recognised",
+      "actor": "team_leader",
+      "source": "ceiling_audio",
+      "confidence": 0.88,
+      "note": "Team leader identified cardiac arrest"
+    },
+    {
+      "index": 3,
+      "timestamp_ms": 8200,
+      "time": "00:08",
+      "event_type": "cpr_initiated",
+      "label": "CPR Started",
+      "actor": "compressor",
+      "source": "ceiling_audio",
+      "confidence": 0.9,
+      "note": "Chest compressions commenced — Rate: 112 bpm — Depth: 5.2 cm"
+    },
+    {
+      "index": 4,
+      "timestamp_ms": 102000,
+      "time": "01:42",
+      "event_type": "rhythm_check",
+      "label": "Rhythm Check",
+      "actor": "team_leader",
+      "source": "ceiling_audio",
+      "confidence": 0.92,
+      "note": "CPR paused to analyse cardiac rhythm — Rhythm: VF — CPR pause: 8s"
+    },
+    {
+      "index": 5,
+      "timestamp_ms": 102000,
+      "time": "01:42",
+      "event_type": "shock_delivered",
+      "label": "Shock Delivered",
+      "actor": "team_leader",
+      "source": "ceiling_audio",
+      "confidence": 0.94,
+      "note": "Defibrillation attempted — Energy: 200J — Pre-shock rhythm: VF"
+    },
+    {
+      "index": 6,
+      "timestamp_ms": 252000,
+      "time": "04:12",
+      "event_type": "cpr_paused",
+      "label": "CPR Paused",
+      "actor": "unknown",
+      "source": "ceiling_audio",
+      "confidence": 0.88,
+      "note": "Compressions interrupted — No-flow time: 28s"
+    },
+    {
+      "index": 7,
+      "timestamp_ms": 350000,
+      "time": "05:50",
+      "event_type": "drug_administered",
+      "label": "Drug Administered",
+      "actor": "team_leader",
+      "source": "ceiling_audio",
+      "confidence": 0.82,
+      "note": "Medication given to patient — Epinephrine 1mg IV"
+    },
+    {
+      "index": 8,
+      "timestamp_ms": 645000,
+      "time": "10:45",
+      "event_type": "rosc_achieved",
+      "label": "ROSC",
+      "actor": "unknown",
+      "source": "ceiling_audio",
+      "confidence": 0.92,
+      "note": "Return of spontaneous circulation achieved — Post-ROSC rhythm: NSR"
+    }
+  ]
+}

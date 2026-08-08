@@ -1,0 +1,309 @@
+{
+  "session_id": "SES-SCN-001",
+  "date": "2026-05-27",
+  "scenario_name": "Failed Adult ACLS – Ventricular Fibrillation Cardiac Arrest",
+  "scenario_type": "VF",
+  "outcome": "terminated",
+  "team_leader_name": "Simulation Team",
+  "team_size": 6,
+  "duration_ms": 720000,
+  "guideline_version": "AHA_2020",
+  "segments": [
+    {
+      "timestamp_ms": 0,
+      "time": "00:00",
+      "speaker": "Airway",
+      "role": "airway",
+      "text": "Doctor, patient is unresponsive!",
+      "ai_expected": "Arrest recognition"
+    },
+    {
+      "timestamp_ms": 8000,
+      "time": "00:08",
+      "speaker": "Team Leader",
+      "role": "team_leader",
+      "text": "Check pulse.",
+      "ai_expected": "Pulse check initiated"
+    },
+    {
+      "timestamp_ms": 20000,
+      "time": "00:20",
+      "speaker": "Compressor",
+      "role": "compressor",
+      "text": "No pulse detected.",
+      "ai_expected": "Cardiac arrest confirmation"
+    },
+    {
+      "timestamp_ms": 32000,
+      "time": "00:32",
+      "speaker": "Team Leader",
+      "role": "team_leader",
+      "text": "Start CPR.",
+      "ai_expected": "CPR initiated"
+    },
+    {
+      "timestamp_ms": 40000,
+      "time": "00:40",
+      "speaker": "Compressor",
+      "role": "compressor",
+      "text": "Starting compressions.",
+      "ai_expected": "Compression started"
+    },
+    {
+      "timestamp_ms": 55000,
+      "time": "00:55",
+      "speaker": "Defibrillator/CPR Coach",
+      "role": "defib_coach",
+      "text": "Pads not connected yet.",
+      "ai_expected": "Equipment delay"
+    },
+    {
+      "timestamp_ms": 78000,
+      "time": "01:18",
+      "speaker": "Defibrillator/CPR Coach",
+      "role": "defib_coach",
+      "text": "What rhythm is this?",
+      "ai_expected": "Rhythm analysis"
+    },
+    {
+      "timestamp_ms": 92000,
+      "time": "01:32",
+      "speaker": "Defibrillator/CPR Coach",
+      "role": "defib_coach",
+      "text": "Looks like VF.",
+      "ai_expected": "VF recognition"
+    },
+    {
+      "timestamp_ms": 110000,
+      "time": "01:50",
+      "speaker": "Team Leader",
+      "role": "team_leader",
+      "text": "Charge to 200 joules.",
+      "ai_expected": "Shock preparation ordered"
+    },
+    {
+      "timestamp_ms": 138000,
+      "time": "02:18",
+      "speaker": "Defibrillator/CPR Coach",
+      "role": "defib_coach",
+      "text": "Charging.",
+      "ai_expected": "Shock preparation"
+    },
+    {
+      "timestamp_ms": 162000,
+      "time": "02:42",
+      "speaker": "Defibrillator/CPR Coach",
+      "role": "defib_coach",
+      "text": "Clear!",
+      "ai_expected": "Shock safety command"
+    },
+    {
+      "timestamp_ms": 168000,
+      "time": "02:48",
+      "speaker": "Defibrillator/CPR Coach",
+      "role": "defib_coach",
+      "text": "Shock delivered.",
+      "ai_expected": "First shock delivered"
+    },
+    {
+      "timestamp_ms": 172000,
+      "time": "02:52",
+      "speaker": "Compressor",
+      "role": "compressor",
+      "text": "",
+      "ai_expected": "Post-shock delay"
+    },
+    {
+      "timestamp_ms": 190000,
+      "time": "03:10",
+      "speaker": "Team Leader",
+      "role": "team_leader",
+      "text": "Stop compressions, check pulse.",
+      "ai_expected": "CPR interruption"
+    },
+    {
+      "timestamp_ms": 202000,
+      "time": "03:22",
+      "speaker": "Compressor",
+      "role": "compressor",
+      "text": "No pulse.",
+      "ai_expected": "Pulse absent"
+    },
+    {
+      "timestamp_ms": 220000,
+      "time": "03:40",
+      "speaker": "Team Leader",
+      "role": "team_leader",
+      "text": "Resume CPR.",
+      "ai_expected": "CPR resumed"
+    },
+    {
+      "timestamp_ms": 250000,
+      "time": "04:10",
+      "speaker": "Recorder",
+      "role": "recorder",
+      "text": "First shock at 2 minutes 48 seconds.",
+      "ai_expected": "Documentation"
+    },
+    {
+      "timestamp_ms": 270000,
+      "time": "04:30",
+      "speaker": "IV Member",
+      "role": "iv_member",
+      "text": "Should we give adrenaline?",
+      "ai_expected": "Medication discussion"
+    },
+    {
+      "timestamp_ms": 302000,
+      "time": "05:02",
+      "speaker": "Team Leader",
+      "role": "team_leader",
+      "text": "Yes, give epinephrine 1 mg.",
+      "ai_expected": "Epinephrine ordered"
+    },
+    {
+      "timestamp_ms": 330000,
+      "time": "05:30",
+      "speaker": "IV Member",
+      "role": "iv_member",
+      "text": "Epinephrine 1 mg given.",
+      "ai_expected": "Drug administration"
+    },
+    {
+      "timestamp_ms": 336000,
+      "time": "05:36",
+      "speaker": "IV Member",
+      "role": "iv_member",
+      "text": "10 ml saline flush given.",
+      "ai_expected": "Flush administration"
+    },
+    {
+      "timestamp_ms": 375000,
+      "time": "06:15",
+      "speaker": "Compressor",
+      "role": "compressor",
+      "text": "Stopping compressions again.",
+      "ai_expected": "Excessive interruption"
+    },
+    {
+      "timestamp_ms": 385000,
+      "time": "06:25",
+      "speaker": "Defibrillator/CPR Coach",
+      "role": "defib_coach",
+      "text": "Compression pause more than 10 seconds.",
+      "ai_expected": "CPR quality alert"
+    },
+    {
+      "timestamp_ms": 400000,
+      "time": "06:40",
+      "speaker": "Team Leader",
+      "role": "team_leader",
+      "text": "Continue CPR.",
+      "ai_expected": "CPR resumed"
+    },
+    {
+      "timestamp_ms": 440000,
+      "time": "07:20",
+      "speaker": "Defibrillator/CPR Coach",
+      "role": "defib_coach",
+      "text": "Still VF.",
+      "ai_expected": "Persistent VF"
+    },
+    {
+      "timestamp_ms": 465000,
+      "time": "07:45",
+      "speaker": "Team Leader",
+      "role": "team_leader",
+      "text": "Charge again.",
+      "ai_expected": "Repeat shock preparation"
+    },
+    {
+      "timestamp_ms": 492000,
+      "time": "08:12",
+      "speaker": "Defibrillator/CPR Coach",
+      "role": "defib_coach",
+      "text": "Charging complete.",
+      "ai_expected": "Shock ready"
+    },
+    {
+      "timestamp_ms": 510000,
+      "time": "08:30",
+      "speaker": "Defibrillator/CPR Coach",
+      "role": "defib_coach",
+      "text": "Shock delivered.",
+      "ai_expected": "Second shock"
+    },
+    {
+      "timestamp_ms": 514000,
+      "time": "08:34",
+      "speaker": "Compressor",
+      "role": "compressor",
+      "text": "",
+      "ai_expected": "Post-shock pause"
+    },
+    {
+      "timestamp_ms": 550000,
+      "time": "09:10",
+      "speaker": "Team Leader",
+      "role": "team_leader",
+      "text": "Anyone checking reversible causes?",
+      "ai_expected": "Hs and Ts discussion"
+    },
+    {
+      "timestamp_ms": 562000,
+      "time": "09:22",
+      "speaker": "Airway",
+      "role": "airway",
+      "text": "No advanced airway yet.",
+      "ai_expected": "Airway omission"
+    },
+    {
+      "timestamp_ms": 580000,
+      "time": "09:40",
+      "speaker": "Team",
+      "role": "team",
+      "text": "",
+      "ai_expected": "Team dynamic failure"
+    },
+    {
+      "timestamp_ms": 610000,
+      "time": "10:10",
+      "speaker": "Recorder",
+      "role": "recorder",
+      "text": "Multiple interruptions noted.",
+      "ai_expected": "Documentation"
+    },
+    {
+      "timestamp_ms": 650000,
+      "time": "10:50",
+      "speaker": "Team Leader",
+      "role": "team_leader",
+      "text": "Continue compressions.",
+      "ai_expected": "CPR continuation"
+    },
+    {
+      "timestamp_ms": 680000,
+      "time": "11:20",
+      "speaker": "Defibrillator/CPR Coach",
+      "role": "defib_coach",
+      "text": "Rhythm unchanged.",
+      "ai_expected": "Rhythm persistence"
+    },
+    {
+      "timestamp_ms": 700000,
+      "time": "11:40",
+      "speaker": "Compressor",
+      "role": "compressor",
+      "text": "Still no pulse.",
+      "ai_expected": "Persistent arrest"
+    },
+    {
+      "timestamp_ms": 720000,
+      "time": "12:00",
+      "speaker": "Team Leader",
+      "role": "team_leader",
+      "text": "Terminate resuscitation.",
+      "ai_expected": "Resuscitation terminated"
+    }
+  ]
+}

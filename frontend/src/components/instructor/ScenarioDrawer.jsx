@@ -180,7 +180,32 @@ export default function ScenarioDrawer({ isOpen, onClose, scenario }) {
 
   // ── Render helpers ────────────────────────────────────────────────────────
   const renderPatientDetails = (details) => {
-    if (!details) return null;
+    if (!details) {
+      if (scenario && scenario.patient) {
+        const pt = scenario.patient;
+        return (
+          <div className="scenario-patient-details">
+            <div className="scenario-detail-row">
+              <span className="scenario-detail-label">Age / Gender</span>
+              <span className="scenario-detail-value">{pt.age} / {pt.sex}</span>
+            </div>
+            <div className="scenario-detail-row">
+              <span className="scenario-detail-label">Weight</span>
+              <span className="scenario-detail-value">{pt.weight_kg} kg</span>
+            </div>
+            <div className="scenario-detail-row">
+              <span className="scenario-detail-label">Presentation</span>
+              <span className="scenario-detail-value">{pt.presentation || "Sudden collapse"}</span>
+            </div>
+            <div className="scenario-detail-row">
+              <span className="scenario-detail-label">History</span>
+              <span className="scenario-detail-value">{pt.history || "No prior history"}</span>
+            </div>
+          </div>
+        );
+      }
+      return null;
+    }
     const pd = typeof details === "string" ? JSON.parse(details) : details;
     return (
       <div className="scenario-patient-details">
@@ -234,7 +259,21 @@ export default function ScenarioDrawer({ isOpen, onClose, scenario }) {
   };
 
   const renderSymptoms = (symptoms) => {
-    if (!symptoms) return null;
+    if (!symptoms) {
+      if (scenario && scenario.complications) {
+        if (scenario.complications.length === 0) return <span style={{ color: "#999" }}>None</span>;
+        return (
+          <div className="scenario-symptoms-list">
+            {scenario.complications.map((comp, idx) => (
+              <span key={idx} className="scenario-symptom-tag" style={{ backgroundColor: "rgba(220, 38, 38, 0.1)", color: "#DC2626", border: "1px solid rgba(220, 38, 38, 0.2)" }}>
+                {comp}
+              </span>
+            ))}
+          </div>
+        );
+      }
+      return null;
+    }
     const symp = typeof symptoms === "string" ? JSON.parse(symptoms) : symptoms;
     const activeSymptoms = Object.entries(symp).filter(([, v]) => v === true);
     if (activeSymptoms.length === 0) return <span style={{ color: "#666" }}>None</span>;
@@ -333,14 +372,14 @@ export default function ScenarioDrawer({ isOpen, onClose, scenario }) {
                   <h4 className="scenario-card-section-title">Symptoms</h4>
                   {renderSymptoms(scenario.symptoms)}
                 </div>
-                {scenario.initial_readings && (
+                {(scenario.initial_readings || scenario.patient) && (
                   <div className="scenario-card-section">
                     <div className="scenario-readings-header">
                       <h4
                         className="scenario-card-section-title"
                         style={{ margin: 0, border: "none", paddingBottom: 0 }}
                       >
-                        Initial Readings
+                        Vitals Control
                       </h4>
                       <button
                         className={`btn-apply-changes${hasPending ? " btn-apply-changes--active" : ""}`}
@@ -352,7 +391,7 @@ export default function ScenarioDrawer({ isOpen, onClose, scenario }) {
                       </button>
                     </div>
                     <div className="scenario-readings-divider" />
-                    {renderInitialReadings(scenario.initial_readings)}
+                    {renderInitialReadings(scenario.initial_readings || { heartRate: true, bloodPressure: true, spo2: true, respiratoryRate: true, etco2: true, temperature: true })}
                   </div>
                 )}
               </div>

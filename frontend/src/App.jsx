@@ -5,7 +5,7 @@ import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import RegistrationRequestPage from "./pages/RegistrationRequestPage";
 import DashboardPage from "./pages/DashboardPage";
-import CaseLibraryPage from "./pages/CaseLibraryPage";
+import ScenarioStudioPage from "./pages/ScenarioStudioPage";
 import SimulationInitializingPage from "./pages/SimulationInitializingPage";
 import SimulationCompletedPage from "./pages/SimulationCompletedPage";
 import SessionsPage from "./pages/SessionsPage";
@@ -29,8 +29,8 @@ export default function App() {
 
         {/* Instructor Workflow */}
         <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/cases" element={<CaseLibraryPage />} />
-        <Route path="/library" element={<CaseLibraryPage />} />
+        <Route path="/cases" element={<ScenarioStudioPage />} />
+        <Route path="/library" element={<ScenarioStudioPage />} />
         <Route path="/initializing" element={<SimulationInitializingPage />} />
         <Route path="/instructor" element={<InstructorDashboard />} />
         <Route path="/completed" element={<SimulationCompletedPage />} />

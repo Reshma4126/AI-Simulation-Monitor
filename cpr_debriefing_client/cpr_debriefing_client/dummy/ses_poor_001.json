@@ -1,0 +1,1043 @@
+{
+  "session_id": "SES-POOR-001",
+  "date": "2026-05-29",
+  "scenario_name": "Failed Adult ACLS -- VF Arrest with Multiple Protocol Violations",
+  "scenario_type": "VF",
+  "outcome": "terminated",
+  "team_leader_name": "Dr. Arjun Mehta (Trainee)",
+  "team_size": 5,
+  "duration_ms": 900000,
+  "guideline_version": "AHA_2020",
+  "metadata": {
+    "session_id": "SES-POOR-001",
+    "date": "2026-05-29",
+    "scenario_name": "Failed Adult ACLS -- VF Arrest with Multiple Protocol Violations",
+    "scenario_type": "VF",
+    "duration_ms": 900000,
+    "team_size": 5,
+    "guideline_version": "AHA_2020"
+  },
+  "events": [
+    {
+      "event_id": "evt_001",
+      "timestamp_ms": 0,
+      "event_type": "session_start",
+      "source_systems": [
+        "manual"
+      ],
+      "actor_role": "unknown",
+      "value": {},
+      "confidence": 1.0,
+      "evidence": [
+        {
+          "source": "manual",
+          "ref": "instructor_trigger_start",
+          "text": "Scenario started by instructor"
+        }
+      ]
+    },
+    {
+      "event_id": "evt_002",
+      "timestamp_ms": 8000,
+      "event_type": "arrest_recognized",
+      "source_systems": [
+        "ceiling_audio"
+      ],
+      "actor_role": "team_leader",
+      "value": {},
+      "confidence": 0.72,
+      "evidence": [
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_001",
+          "text": "wait, is he breathing? I think something is wrong"
+        }
+      ]
+    },
+    {
+      "event_id": "evt_003",
+      "timestamp_ms": 52000,
+      "event_type": "cpr_initiated",
+      "source_systems": [
+        "ceiling_audio"
+      ],
+      "actor_role": "compressor",
+      "value": {
+        "compression_rate": 78,
+        "compression_depth_cm": 3.8,
+        "recoil": false
+      },
+      "confidence": 0.82,
+      "evidence": [
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_006",
+          "text": "rhythmic thumping sounds detected — compression onset"
+        },
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_005",
+          "text": "Starting compressions"
+        }
+      ]
+    },
+    {
+      "event_id": "evt_004",
+      "timestamp_ms": 180000,
+      "event_type": "rhythm_check",
+      "source_systems": [
+        "ceiling_audio"
+      ],
+      "actor_role": "team_leader",
+      "value": {
+        "rhythm": "VF",
+        "pause_duration_ms": 22000
+      },
+      "confidence": 0.85,
+      "evidence": [
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_018",
+          "text": "Everyone stop, I'm checking the rhythm"
+        },
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_019",
+          "text": "compression sounds ceased — pause detected"
+        }
+      ]
+    },
+    {
+      "event_id": "evt_005",
+      "timestamp_ms": 210000,
+      "event_type": "shock_delivered",
+      "source_systems": [
+        "ceiling_audio"
+      ],
+      "actor_role": "team_leader",
+      "value": {
+        "energy_joules": 150,
+        "rhythm_pre": "VF"
+      },
+      "confidence": 0.88,
+      "evidence": [
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_022",
+          "text": "150 joules I think, or was it 200? Charging — stand clear — shocking now"
+        },
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_023",
+          "text": "defibrillator discharge audio spike detected"
+        }
+      ]
+    },
+    {
+      "event_id": "evt_006",
+      "timestamp_ms": 215000,
+      "event_type": "cpr_paused",
+      "source_systems": [
+        "ceiling_audio"
+      ],
+      "actor_role": "unknown",
+      "value": {
+        "pause_duration_ms": 38000
+      },
+      "confidence": 0.92,
+      "evidence": [
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_024",
+          "text": "38-second silence window detected after shock — no compression sounds"
+        }
+      ]
+    },
+    {
+      "event_id": "evt_007",
+      "timestamp_ms": 420000,
+      "event_type": "drug_administered",
+      "source_systems": [
+        "ceiling_audio"
+      ],
+      "actor_role": "iv_member",
+      "value": {
+        "drug": "epinephrine",
+        "dose_mg": 0.5,
+        "route": "IV",
+        "order_complete": false
+      },
+      "confidence": 0.72,
+      "evidence": [
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_041",
+          "text": "give some adrenaline — half a milligram I think"
+        },
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_042",
+          "text": "epinephrine given — no dose readback detected"
+        }
+      ]
+    },
+    {
+      "event_id": "evt_008",
+      "timestamp_ms": 480000,
+      "event_type": "rhythm_check",
+      "source_systems": [
+        "ceiling_audio"
+      ],
+      "actor_role": "team_leader",
+      "value": {
+        "rhythm": "VF",
+        "pause_duration_ms": 31000
+      },
+      "confidence": 0.83,
+      "evidence": [
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_051",
+          "text": "Stop CPR — checking rhythm again"
+        },
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_052",
+          "text": "compression sounds ceased — pause detected"
+        }
+      ]
+    },
+    {
+      "event_id": "evt_009",
+      "timestamp_ms": 530000,
+      "event_type": "shock_delivered",
+      "source_systems": [
+        "ceiling_audio"
+      ],
+      "actor_role": "team_leader",
+      "value": {
+        "energy_joules": 150,
+        "rhythm_pre": "VF"
+      },
+      "confidence": 0.86,
+      "evidence": [
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_056",
+          "text": "still VF — same energy again, stand clear, shocking"
+        },
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_057",
+          "text": "defibrillator discharge audio spike detected — second shock"
+        }
+      ]
+    },
+    {
+      "event_id": "evt_010",
+      "timestamp_ms": 540000,
+      "event_type": "cpr_paused",
+      "source_systems": [
+        "ceiling_audio"
+      ],
+      "actor_role": "unknown",
+      "value": {
+        "pause_duration_ms": 28000
+      },
+      "confidence": 0.9,
+      "evidence": [
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_058",
+          "text": "28-second silence window detected after second shock — no compression sounds"
+        }
+      ]
+    },
+    {
+      "event_id": "evt_011",
+      "timestamp_ms": 720000,
+      "event_type": "drug_administered",
+      "source_systems": [
+        "ceiling_audio"
+      ],
+      "actor_role": "iv_member",
+      "value": {
+        "drug": "epinephrine",
+        "dose_mg": 1,
+        "route": "IV",
+        "order_complete": false
+      },
+      "confidence": 0.68,
+      "evidence": [
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_076",
+          "text": "give epi again — one milligram IV"
+        },
+        {
+          "source": "ceiling_audio",
+          "ref": "seg_077",
+          "text": "drug administration confirmed — no verbal readback from nurse"
+        }
+      ]
+    },
+    {
+      "event_id": "evt_012",
+      "timestamp_ms": 900000,
+      "event_type": "session_end",
+      "source_systems": [
+        "manual"
+      ],
+      "actor_role": "unknown",
+      "value": {
+        "reason": "team_decision"
+      },
+      "confidence": 1.0,
+      "evidence": [
+        {
+          "source": "manual",
+          "ref": "instructor_trigger_end",
+          "text": "Scenario terminated by instructor"
+        }
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "timestamp_ms": 0,
+      "time": "00:00",
+      "speaker": "Nurse (Airway)",
+      "role": "airway",
+      "text": "Doctor, patient is not responding! He collapsed suddenly.",
+      "ai_expected": "Arrest recognition"
+    },
+    {
+      "timestamp_ms": 8000,
+      "time": "00:08",
+      "speaker": "Dr. Mehta (Team Leader)",
+      "role": "team_leader",
+      "text": "Wait, is he breathing? I think something is wrong... let me check.",
+      "ai_expected": "Delayed arrest recognition"
+    },
+    {
+      "timestamp_ms": 18000,
+      "time": "00:18",
+      "speaker": "Compressor",
+      "role": "compressor",
+      "text": "He has no pulse. Should we start CPR?",
+      "ai_expected": "Pulse check"
+    },
+    {
+      "timestamp_ms": 28000,
+      "time": "00:28",
+      "speaker": "Dr. Mehta (Team Leader)",
+      "role": "team_leader",
+      "text": "Yes, um... yes start compressions. Somebody get the crash cart.",
+      "ai_expected": "Delayed CPR order (20s delay)"
+    },
+    {
+      "timestamp_ms": 52000,
+      "time": "00:52",
+      "speaker": "Compressor",
+      "role": "compressor",
+      "text": "Starting compressions now.",
+      "ai_expected": "CPR started (44 seconds after arrest -- DELAYED)"
+    },
+    {
+      "timestamp_ms": 65000,
+      "time": "01:05",
+      "speaker": "Defib/CPR Coach",
+      "role": "defib_coach",
+      "text": "I'm attaching the pads now. What energy should I charge to?",
+      "ai_expected": "Pad attachment"
+    },
+    {
+      "timestamp_ms": 80000,
+      "time": "01:20",
+      "speaker": "Dr. Mehta (Team Leader)",
+      "role": "team_leader",
+      "text": "Uh... 150 joules I think. Or was it 200? Just charge it.",
+      "ai_expected": "Incorrect shock energy ordered (150J instead of 200J)"
+    },
+    {
+      "timestamp_ms": 100000,
+      "time": "01:40",
+      "speaker": "Compressor",
+      "role": "compressor",
+      "text": "I'm getting tired. Can someone switch?",
+      "ai_expected": "Compressor fatigue -- no rotation"
+    },
+    {
+      "timestamp_ms": 115000,
+      "time": "01:55",
+      "speaker": "Dr. Mehta (Team Leader)",
+      "role": "team_leader",
+      "text": "Just keep going for now. Somebody check the rhythm.",
+      "ai_expected": "No compressor rotation plan"
+    },
+    {
+      "timestamp_ms": 130000,
+      "time": "02:10",
+      "speaker": "Defib/CPR Coach",
+      "role": "defib_coach",
+      "text": "Monitor shows VF.",
+      "ai_expected": "Rhythm identified VF"
+    },
+    {
+      "timestamp_ms": 145000,
+      "time": "02:25",
+      "speaker": "Nurse (IV)",
+      "role": "iv_member",
+      "text": "IV access established. Should I give adrenaline?",
+      "ai_expected": "IV access"
+    },
+    {
+      "timestamp_ms": 160000,
+      "time": "02:40",
+      "speaker": "Dr. Mehta (Team Leader)",
+      "role": "team_leader",
+      "text": "Not yet, let us shock first.",
+      "ai_expected": "Shock preparation"
+    },
+    {
+      "timestamp_ms": 180000,
+      "time": "03:00",
+      "speaker": "Dr. Mehta (Team Leader)",
+      "role": "team_leader",
+      "text": "Stop CPR, we need to check the rhythm again. Everyone stop.",
+      "ai_expected": "Prolonged CPR pause for rhythm check (22s pause)"
+    },
+    {
+      "timestamp_ms": 202000,
+      "time": "03:22",
+      "speaker": "Defib/CPR Coach",
+      "role": "defib_coach",
+      "text": "Still VF. Charged to 150 joules.",
+      "ai_expected": "Sub-therapeutic shock energy"
+    },
+    {
+      "timestamp_ms": 210000,
+      "time": "03:30",
+      "speaker": "Dr. Mehta (Team Leader)",
+      "role": "team_leader",
+      "text": "Okay everyone stand back. Clear.",
+      "ai_expected": "Shock safety check"
+    },
+    {
+      "timestamp_ms": 212000,
+      "time": "03:32",
+      "speaker": "Defib/CPR Coach",
+      "role": "defib_coach",
+      "text": "Shock delivered.",
+      "ai_expected": "First shock delivered (3:32 -- DELAYED, target < 2:00)"
+    },
+    {
+      "timestamp_ms": 215000,
+      "time": "03:35",
+      "speaker": "Dr. Mehta (Team Leader)",
+      "role": "team_leader",
+      "text": "Wait, let me check if there is a pulse now.",
+      "ai_expected": "Post-shock pulse check delay -- no immediate CPR"
+    },
+    {
+      "timestamp_ms": 253000,
+      "time": "04:13",
+      "speaker": "Compressor",
+      "role": "compressor",
+      "text": "Doctor, should I start CPR again?",
+      "ai_expected": "38-second post-shock CPR pause (target < 10s)"
+    },
+    {
+      "timestamp_ms": 260000,
+      "time": "04:20",
+      "speaker": "Dr. Mehta (Team Leader)",
+      "role": "team_leader",
+      "text": "Yes yes, start CPR. Give the adrenaline too.",
+      "ai_expected": "Resumed CPR after excessive pause"
+    },
+    {
+      "timestamp_ms": 275000,
+      "time": "04:35",
+      "speaker": "Nurse (IV)",
+      "role": "iv_member",
+      "text": "How much adrenaline?",
+      "ai_expected": "Drug order not specified -- no closed loop"
+    },
+    {
+      "timestamp_ms": 290000,
+      "time": "04:50",
+      "speaker": "Dr. Mehta (Team Leader)",
+      "role": "team_leader",
+      "text": "Um, give some... half a milligram I think.",
+      "ai_expected": "Incorrect epinephrine dose ordered (0.5mg -- should be 1mg)"
+    },
+    {
+      "timestamp_ms": 420000,
+      "time": "07:00",
+      "speaker": "Nurse (IV)",
+      "role": "iv_member",
+      "text": "Adrenaline given.",
+      "ai_expected": "Epinephrine administered (7:00 -- no verbal dose confirmation)"
+    },
+    {
+      "timestamp_ms": 435000,
+      "time": "07:15",
+      "speaker": "Compressor",
+      "role": "compressor",
+      "text": "I need a break, my arms are giving out.",
+      "ai_expected": "No compressor rotation -- fatigue"
+    },
+    {
+      "timestamp_ms": 445000,
+      "time": "07:25",
+      "speaker": "Dr. Mehta (Team Leader)",
+      "role": "team_leader",
+      "text": "Just push through it. Has anyone thought about reversible causes?",
+      "ai_expected": "Late Hs and Ts discussion (7:25 -- should be < 5:00)"
+    },
+    {
+      "timestamp_ms": 460000,
+      "time": "07:40",
+      "speaker": "Nurse (Airway)",
+      "role": "airway",
+      "text": "Patient has no advanced airway. Should I intubate?",
+      "ai_expected": "No advanced airway secured"
+    },
+    {
+      "timestamp_ms": 475000,
+      "time": "07:55",
+      "speaker": "Dr. Mehta (Team Leader)",
+      "role": "team_leader",
+      "text": "Yes please try. Also can someone check potassium?",
+      "ai_expected": "Delayed intubation attempt"
+    },
+    {
+      "timestamp_ms": 480000,
+      "time": "08:00",
+      "speaker": "Dr. Mehta (Team Leader)",
+      "role": "team_leader",
+      "text": "Stop CPR for rhythm check. Everyone freeze.",
+      "ai_expected": "Second rhythm check pause (31s -- excessive)"
+    },
+    {
+      "timestamp_ms": 511000,
+      "time": "08:31",
+      "speaker": "Defib/CPR Coach",
+      "role": "defib_coach",
+      "text": "Still VF. Ready to shock. Charging to 150 again.",
+      "ai_expected": "Sub-therapeutic energy second shock"
+    },
+    {
+      "timestamp_ms": 525000,
+      "time": "08:45",
+      "speaker": "Dr. Mehta (Team Leader)",
+      "role": "team_leader",
+      "text": "Clear!",
+      "ai_expected": "Second shock"
+    },
+    {
+      "timestamp_ms": 530000,
+      "time": "08:50",
+      "speaker": "Defib/CPR Coach",
+      "role": "defib_coach",
+      "text": "Shocked. Should we resume CPR?",
+      "ai_expected": "Second shock delivered -- asking for CPR order (no standing protocol)"
+    },
+    {
+      "timestamp_ms": 542000,
+      "time": "09:02",
+      "speaker": "Dr. Mehta (Team Leader)",
+      "role": "team_leader",
+      "text": "Yes resume. Has amiodarone been given yet?",
+      "ai_expected": "28-second post-shock pause before CPR resumed"
+    },
+    {
+      "timestamp_ms": 558000,
+      "time": "09:18",
+      "speaker": "Nurse (IV)",
+      "role": "iv_member",
+      "text": "No amiodarone given, nobody ordered it.",
+      "ai_expected": "Amiodarone omitted (should be given after second shock)"
+    },
+    {
+      "timestamp_ms": 575000,
+      "time": "09:35",
+      "speaker": "Dr. Mehta (Team Leader)",
+      "role": "team_leader",
+      "text": "Give amiodarone... what dose was it again?",
+      "ai_expected": "Team leader unsure of amiodarone dose"
+    },
+    {
+      "timestamp_ms": 590000,
+      "time": "09:50",
+      "speaker": "Nurse (IV)",
+      "role": "iv_member",
+      "text": "I think 300 mg. Should I give it?",
+      "ai_expected": "Amiodarone ordered without dose specification"
+    },
+    {
+      "timestamp_ms": 620000,
+      "time": "10:20",
+      "speaker": "Dr. Mehta (Team Leader)",
+      "role": "team_leader",
+      "text": "Yes. What is the rhythm now?",
+      "ai_expected": "Amiodarone order not confirmed"
+    },
+    {
+      "timestamp_ms": 700000,
+      "time": "11:40",
+      "speaker": "Defib/CPR Coach",
+      "role": "defib_coach",
+      "text": "Still in VF. No change.",
+      "ai_expected": "Persistent VF despite interventions"
+    },
+    {
+      "timestamp_ms": 720000,
+      "time": "12:00",
+      "speaker": "Nurse (IV)",
+      "role": "iv_member",
+      "text": "Second dose of adrenaline given.",
+      "ai_expected": "Second epinephrine -- unconfirmed order"
+    },
+    {
+      "timestamp_ms": 800000,
+      "time": "13:20",
+      "speaker": "Dr. Mehta (Team Leader)",
+      "role": "team_leader",
+      "text": "I think we should consider stopping. The team is exhausted.",
+      "ai_expected": "Early termination discussion (13:20)"
+    },
+    {
+      "timestamp_ms": 840000,
+      "time": "14:00",
+      "speaker": "Compressor",
+      "role": "compressor",
+      "text": "I cannot continue compressions. My arms are completely done.",
+      "ai_expected": "Compressor exhaustion -- no rotation performed"
+    },
+    {
+      "timestamp_ms": 870000,
+      "time": "14:30",
+      "speaker": "Dr. Mehta (Team Leader)",
+      "role": "team_leader",
+      "text": "Okay. Time of death... 14:30. Thank you everyone.",
+      "ai_expected": "Resuscitation terminated"
+    }
+  ],
+  "conversation": [
+    {
+      "timestamp_ms": 0,
+      "time": "00:00",
+      "text": "Scenario start — patient brought in unresponsive."
+    },
+    {
+      "timestamp_ms": 4000,
+      "time": "00:04",
+      "text": "Doctor, patient is not responding! He collapsed suddenly."
+    },
+    {
+      "timestamp_ms": 8000,
+      "time": "00:08",
+      "text": "Wait, is he breathing? I think something is wrong."
+    },
+    {
+      "timestamp_ms": 12000,
+      "time": "00:12",
+      "text": "No pulse, no breathing. He is unresponsive."
+    },
+    {
+      "timestamp_ms": 18000,
+      "time": "00:18",
+      "text": "Are you sure? Let me check again."
+    },
+    {
+      "timestamp_ms": 22000,
+      "time": "00:22",
+      "text": "Yes doctor, definitely no pulse."
+    },
+    {
+      "timestamp_ms": 28000,
+      "time": "00:28",
+      "text": "Okay, okay. Uh... call a code. Someone call a code blue."
+    },
+    {
+      "timestamp_ms": 35000,
+      "time": "00:35",
+      "text": "Code blue called."
+    },
+    {
+      "timestamp_ms": 40000,
+      "time": "00:40",
+      "text": "Should we start CPR?"
+    },
+    {
+      "timestamp_ms": 44000,
+      "time": "00:44",
+      "text": "Yes! Start compressions. Someone get on the chest."
+    },
+    {
+      "timestamp_ms": 52000,
+      "time": "00:52",
+      "text": "Starting compressions now."
+    },
+    {
+      "timestamp_ms": 100000,
+      "time": "01:40",
+      "text": "I'm getting tired. These compressions are hard."
+    },
+    {
+      "timestamp_ms": 110000,
+      "time": "01:50",
+      "text": "Keep going, keep going."
+    },
+    {
+      "timestamp_ms": 140000,
+      "time": "02:20",
+      "text": "Pads are on, connecting now."
+    },
+    {
+      "timestamp_ms": 160000,
+      "time": "02:40",
+      "text": "Should I charge the defib?"
+    },
+    {
+      "timestamp_ms": 170000,
+      "time": "02:50",
+      "text": "Wait, let me think. What energy do we use?"
+    },
+    {
+      "timestamp_ms": 176000,
+      "time": "02:56",
+      "text": "150 joules I think, or was it 200?"
+    },
+    {
+      "timestamp_ms": 180000,
+      "time": "03:00",
+      "text": "Everyone stop, I'm checking the rhythm."
+    },
+    {
+      "timestamp_ms": 185000,
+      "time": "03:05",
+      "text": "It's VF. Ventricular fibrillation."
+    },
+    {
+      "timestamp_ms": 190000,
+      "time": "03:10",
+      "text": "Charge to 150. Stand clear!"
+    },
+    {
+      "timestamp_ms": 205000,
+      "time": "03:25",
+      "text": "Clear! Shocking now."
+    },
+    {
+      "timestamp_ms": 210000,
+      "time": "03:30",
+      "text": "[Shock delivered]"
+    },
+    {
+      "timestamp_ms": 215000,
+      "time": "03:35",
+      "text": "Should we restart CPR?"
+    },
+    {
+      "timestamp_ms": 220000,
+      "time": "03:40",
+      "text": "Let me check the pulse first... no pulse."
+    },
+    {
+      "timestamp_ms": 253000,
+      "time": "04:13",
+      "text": "Restart compressions."
+    },
+    {
+      "timestamp_ms": 255000,
+      "time": "04:15",
+      "text": "Compressions resumed."
+    },
+    {
+      "timestamp_ms": 380000,
+      "time": "06:20",
+      "text": "We need to give adrenaline."
+    },
+    {
+      "timestamp_ms": 415000,
+      "time": "06:55",
+      "text": "Give some adrenaline — half a milligram I think."
+    },
+    {
+      "timestamp_ms": 420000,
+      "time": "07:00",
+      "text": "Giving it now."
+    },
+    {
+      "timestamp_ms": 425000,
+      "time": "07:05",
+      "text": "I'm tired again. Can someone else compress?"
+    },
+    {
+      "timestamp_ms": 430000,
+      "time": "07:10",
+      "text": "Keep going for now."
+    },
+    {
+      "timestamp_ms": 445000,
+      "time": "07:25",
+      "text": "Should we think about reversible causes?"
+    },
+    {
+      "timestamp_ms": 460000,
+      "time": "07:40",
+      "text": "Uh, maybe hyperkalaemia? I'm not sure."
+    },
+    {
+      "timestamp_ms": 475000,
+      "time": "07:55",
+      "text": "Stop CPR, checking rhythm."
+    },
+    {
+      "timestamp_ms": 480000,
+      "time": "08:00",
+      "text": "Still VF."
+    },
+    {
+      "timestamp_ms": 495000,
+      "time": "08:15",
+      "text": "Charge again — same energy."
+    },
+    {
+      "timestamp_ms": 525000,
+      "time": "08:45",
+      "text": "Clear! Shocking again."
+    },
+    {
+      "timestamp_ms": 530000,
+      "time": "08:50",
+      "text": "[Shock delivered]"
+    },
+    {
+      "timestamp_ms": 535000,
+      "time": "08:55",
+      "text": "Should we restart?"
+    },
+    {
+      "timestamp_ms": 540000,
+      "time": "09:00",
+      "text": "Wait... let me check... no pulse."
+    },
+    {
+      "timestamp_ms": 558000,
+      "time": "09:18",
+      "text": "Have we given amiodarone?"
+    },
+    {
+      "timestamp_ms": 562000,
+      "time": "09:22",
+      "text": "No, we haven't given amiodarone yet."
+    },
+    {
+      "timestamp_ms": 565000,
+      "time": "09:25",
+      "text": "What dose was it again?"
+    },
+    {
+      "timestamp_ms": 568000,
+      "time": "09:28",
+      "text": "300 milligrams IV."
+    },
+    {
+      "timestamp_ms": 572000,
+      "time": "09:32",
+      "text": "Okay give it. And restart CPR!"
+    },
+    {
+      "timestamp_ms": 580000,
+      "time": "09:40",
+      "text": "Compressions resumed."
+    },
+    {
+      "timestamp_ms": 600000,
+      "time": "10:00",
+      "text": "I can't keep going, I'm exhausted."
+    },
+    {
+      "timestamp_ms": 716000,
+      "time": "11:56",
+      "text": "Give another epi."
+    },
+    {
+      "timestamp_ms": 720000,
+      "time": "12:00",
+      "text": "Giving epinephrine 1 mg IV."
+    },
+    {
+      "timestamp_ms": 840000,
+      "time": "14:00",
+      "text": "I really can't compress anymore."
+    },
+    {
+      "timestamp_ms": 850000,
+      "time": "14:10",
+      "text": "Continue."
+    },
+    {
+      "timestamp_ms": 880000,
+      "time": "14:40",
+      "text": "How long have we been going?"
+    },
+    {
+      "timestamp_ms": 885000,
+      "time": "14:45",
+      "text": "Fifteen minutes."
+    },
+    {
+      "timestamp_ms": 890000,
+      "time": "14:50",
+      "text": "I think we should consider stopping."
+    },
+    {
+      "timestamp_ms": 895000,
+      "time": "14:55",
+      "text": "Agreed. Anyone object?"
+    },
+    {
+      "timestamp_ms": 900000,
+      "time": "15:00",
+      "text": "Resuscitation terminated. Time of death — 15:00."
+    }
+  ],
+  "clinical_timeline": [
+    {
+      "index": 1,
+      "timestamp_ms": 0,
+      "time": "00:00",
+      "event_type": "session_start",
+      "label": "Session Started",
+      "actor": "unknown",
+      "source": "manual",
+      "confidence": 1.0,
+      "note": "Scenario initiated by instructor"
+    },
+    {
+      "index": 2,
+      "timestamp_ms": 8000,
+      "time": "00:08",
+      "event_type": "arrest_recognized",
+      "label": "Arrest Recognised",
+      "actor": "team_leader",
+      "source": "ceiling_audio",
+      "confidence": 0.72,
+      "note": "Team leader identified cardiac arrest"
+    },
+    {
+      "index": 3,
+      "timestamp_ms": 52000,
+      "time": "00:52",
+      "event_type": "cpr_initiated",
+      "label": "CPR Started",
+      "actor": "compressor",
+      "source": "ceiling_audio",
+      "confidence": 0.82,
+      "note": "Chest compressions commenced — Rate: 78 bpm — Depth: 3.8 cm"
+    },
+    {
+      "index": 4,
+      "timestamp_ms": 180000,
+      "time": "03:00",
+      "event_type": "rhythm_check",
+      "label": "Rhythm Check",
+      "actor": "team_leader",
+      "source": "ceiling_audio",
+      "confidence": 0.85,
+      "note": "CPR paused to analyse cardiac rhythm — Rhythm: VF — CPR pause: 22s"
+    },
+    {
+      "index": 5,
+      "timestamp_ms": 210000,
+      "time": "03:30",
+      "event_type": "shock_delivered",
+      "label": "Shock Delivered",
+      "actor": "team_leader",
+      "source": "ceiling_audio",
+      "confidence": 0.88,
+      "note": "Defibrillation attempted — Energy: 150J — Pre-shock rhythm: VF"
+    },
+    {
+      "index": 6,
+      "timestamp_ms": 215000,
+      "time": "03:35",
+      "event_type": "cpr_paused",
+      "label": "CPR Paused",
+      "actor": "unknown",
+      "source": "ceiling_audio",
+      "confidence": 0.92,
+      "note": "Compressions interrupted — No-flow time: 38s"
+    },
+    {
+      "index": 7,
+      "timestamp_ms": 420000,
+      "time": "07:00",
+      "event_type": "drug_administered",
+      "label": "Drug Administered",
+      "actor": "iv_member",
+      "source": "ceiling_audio",
+      "confidence": 0.72,
+      "note": "Medication given to patient — Epinephrine 0.5mg IV"
+    },
+    {
+      "index": 8,
+      "timestamp_ms": 480000,
+      "time": "08:00",
+      "event_type": "rhythm_check",
+      "label": "Rhythm Check",
+      "actor": "team_leader",
+      "source": "ceiling_audio",
+      "confidence": 0.83,
+      "note": "CPR paused to analyse cardiac rhythm — Rhythm: VF — CPR pause: 31s"
+    },
+    {
+      "index": 9,
+      "timestamp_ms": 530000,
+      "time": "08:50",
+      "event_type": "shock_delivered",
+      "label": "Shock Delivered",
+      "actor": "team_leader",
+      "source": "ceiling_audio",
+      "confidence": 0.86,
+      "note": "Defibrillation attempted — Energy: 150J — Pre-shock rhythm: VF"
+    },
+    {
+      "index": 10,
+      "timestamp_ms": 540000,
+      "time": "09:00",
+      "event_type": "cpr_paused",
+      "label": "CPR Paused",
+      "actor": "unknown",
+      "source": "ceiling_audio",
+      "confidence": 0.9,
+      "note": "Compressions interrupted — No-flow time: 28s"
+    },
+    {
+      "index": 11,
+      "timestamp_ms": 720000,
+      "time": "12:00",
+      "event_type": "drug_administered",
+      "label": "Drug Administered",
+      "actor": "iv_member",
+      "source": "ceiling_audio",
+      "confidence": 0.68,
+      "note": "Medication given to patient — Epinephrine 1mg IV"
+    },
+    {
+      "index": 12,
+      "timestamp_ms": 900000,
+      "time": "15:00",
+      "event_type": "session_end",
+      "label": "Session Ended",
+      "actor": "unknown",
+      "source": "manual",
+      "confidence": 1.0,
+      "note": "Resuscitation terminated / scenario complete"
+    }
+  ]
+}

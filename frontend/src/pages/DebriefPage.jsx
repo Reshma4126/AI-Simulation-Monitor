@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import "../components/dashboard/dashboard.css";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = (import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
 
 export default function DebriefPage() {
   const navigate = useNavigate();
@@ -36,6 +36,7 @@ export default function DebriefPage() {
     params.sessionCode ||
     searchParams.get("sessionCode") ||
     location.state?.sessionCode ||
+    sessionStorage.getItem("session_code") ||
     sessionStorage.getItem("currentSessionCode") ||
     sessionStorage.getItem("activeSessionCode") ||
     "R04ZOG"; // fallback for standalone testing

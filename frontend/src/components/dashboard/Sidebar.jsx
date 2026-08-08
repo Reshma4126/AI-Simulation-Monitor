@@ -57,15 +57,7 @@ export default function Sidebar({
         navigate("/reports");
       },
     },
-    {
-      id: "library",
-      label: "Scenario Library",
-      icon: BookOpen,
-      onClick: () => {
-        if (setActiveTab) setActiveTab("library");
-        navigate("/cases");
-      },
-    },
+
     {
       id: "settings",
       label: "Settings",

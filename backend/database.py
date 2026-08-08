@@ -155,6 +155,20 @@ async def init_db():
                 except Exception as e:
                     print(f"[DB] Info: {e}")
 
+            # Add current_scenario_json if missing
+            await cur.execute(
+                "SHOW COLUMNS FROM sessions LIKE 'current_scenario_json'"
+            )
+            has_json_col = await cur.fetchone()
+
+            if not has_json_col:
+                try:
+                    await cur.execute(
+                        "ALTER TABLE sessions ADD COLUMN current_scenario_json TEXT NULL"
+                    )
+                except Exception as e:
+                    print(f"[DB] Info: {e}")
+
             # Seed scenarios if empty
             await cur.execute("SELECT COUNT(*) FROM scenarios")
             count_res = await cur.fetchone()

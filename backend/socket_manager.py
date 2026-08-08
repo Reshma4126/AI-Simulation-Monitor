@@ -303,12 +303,20 @@ async def join_session(sid, data):
                 event_history = json.loads(sess_event_row["event_log"])
                 await sio.emit("session_history_log", {"event_log": event_history}, to=sid)
 
-            # If session has current_scenario_id, fetch and send it
-            await cur.execute("SELECT current_scenario_id FROM sessions WHERE id = %s", (session["id"],))
+            # If session has current_scenario_id or current_scenario_json, fetch and send it
+            await cur.execute("SELECT current_scenario_id, current_scenario_json FROM sessions WHERE id = %s", (session["id"],))
             session_row = await cur.fetchone()
-            if session_row and session_row.get("current_scenario_id"):
-                scenario_id = session_row["current_scenario_id"]
-                scenario = next((s for s in SCENARIOS_CACHE if s["id"] == scenario_id), None)
+            if session_row:
+                scenario = None
+                if session_row.get("current_scenario_json"):
+                    try:
+                        scenario = json.loads(session_row["current_scenario_json"])
+                    except Exception:
+                        pass
+                elif session_row.get("current_scenario_id"):
+                    scenario_id = session_row["current_scenario_id"]
+                    scenario = next((s for s in SCENARIOS_CACHE if s["id"] == scenario_id), None)
+                
                 if scenario:
                     if payload.get("role") == "instructor":
                         await sio.emit("scenario_selected", scenario, to=sid)
