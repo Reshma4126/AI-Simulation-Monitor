@@ -1,0 +1,50 @@
+{
+  "scenario_generation_enabled": {
+    "value": true,
+    "description": "Allow instructors to generate AI scenarios from the Scenario Studio.",
+    "changed_by": "system",
+    "changed_at": ""
+  },
+  "ai_scenario_narration_enabled": {
+    "value": true,
+    "description": "System speaks the scenario introduction and hints aloud during a run.",
+    "changed_by": "system",
+    "changed_at": ""
+  },
+  "ai_debrief_speech_enabled": {
+    "value": true,
+    "description": "When no human debrief is detected in the session transcript, the AI reads the debriefing report aloud.",
+    "changed_by": "system",
+    "changed_at": ""
+  },
+  "instructor_voice_input_enabled": {
+    "value": false,
+    "description": "Allow instructors to speak their own scenario; system transcribes and parses it.",
+    "changed_by": "system",
+    "changed_at": ""
+  },
+  "outcome_prediction_enabled": {
+    "value": true,
+    "description": "Before a scenario runs, system predicts expected outcomes and benchmarks actual performance.",
+    "changed_by": "system",
+    "changed_at": ""
+  },
+  "gamification_enabled": {
+    "value": true,
+    "description": "Enable XP, badges, and leaderboard for scenario completions.",
+    "changed_by": "system",
+    "changed_at": ""
+  },
+  "server_side_tts_enabled": {
+    "value": false,
+    "description": "Generate TTS audio on the server (gTTS) instead of browser Web Speech API. Requires internet access.",
+    "changed_by": "system",
+    "changed_at": ""
+  },
+  "video_role_recognition_enabled": {
+    "value": false,
+    "description": "[Phase 2] Activate camera feed for per-person role recognition during live scenarios.",
+    "changed_by": "system",
+    "changed_at": ""
+  }
+}

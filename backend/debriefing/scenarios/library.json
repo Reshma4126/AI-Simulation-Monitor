@@ -1,0 +1,364 @@
+{
+  "templates": [
+    {
+      "template_id": "T001",
+      "title": "Ventricular Fibrillation — Adult Cardiac Arrest",
+      "rhythm_type": "VF",
+      "tags": { "level": "beginner", "specialities": ["ER","Cardio","Medicine","ICU"], "locations": ["ER","Ward_Cardio","ICU"] },
+      "patient": { "age_range": [45, 70], "sex_options": ["Male","Female"], "weight_range": [65, 90], "presentation": "Sudden collapse, unresponsive, no pulse" },
+      "complications": [],
+      "hints": ["Check pulse immediately.", "Attach pads and power on the defibrillator.", "Maintain CPR rate 100–120 bpm."],
+      "checklist": [
+        {"action": "Recognise cardiac arrest", "window_sec": 15, "critical": true},
+        {"action": "Call for help / activate code blue", "window_sec": 20, "critical": true},
+        {"action": "Begin chest compressions", "window_sec": 30, "critical": true},
+        {"action": "Attach defibrillator / pads", "window_sec": 120, "critical": true},
+        {"action": "Identify VF on monitor", "window_sec": 150, "critical": true},
+        {"action": "Deliver first shock (200 J biphasic)", "window_sec": 180, "critical": true},
+        {"action": "Resume CPR immediately post-shock", "window_sec": 195, "critical": true},
+        {"action": "Establish IV/IO access", "window_sec": 240, "critical": false},
+        {"action": "Epinephrine 1 mg IV after 2nd shock", "window_sec": 300, "critical": false},
+        {"action": "Consider reversible causes (Hs & Ts)", "window_sec": 360, "critical": false}
+      ],
+      "estimated_duration_min": {"beginner": 8, "intermediate": 12, "advanced": 18}
+    },
+    {
+      "template_id": "T002",
+      "title": "PEA — Pulseless Electrical Activity",
+      "rhythm_type": "PEA",
+      "tags": { "level": "beginner", "specialities": ["ER","ICU","Medicine","Surgery"], "locations": ["ER","ICU","Ward_Medical","Ward_Surgical"] },
+      "patient": { "age_range": [50, 75], "sex_options": ["Male","Female"], "weight_range": [60, 85], "presentation": "Pulseless, organised rhythm on monitor" },
+      "complications": [],
+      "hints": ["PEA — do NOT shock. Continue CPR.", "Identify the reversible cause (Hs & Ts).", "Give epinephrine every 3–5 minutes."],
+      "checklist": [
+        {"action": "Recognise cardiac arrest", "window_sec": 15, "critical": true},
+        {"action": "Begin CPR", "window_sec": 30, "critical": true},
+        {"action": "Attach monitor — confirm PEA (organised rhythm, no pulse)", "window_sec": 90, "critical": true},
+        {"action": "Confirm PEA — no shock indicated", "window_sec": 120, "critical": true},
+        {"action": "Establish IV/IO access", "window_sec": 150, "critical": false},
+        {"action": "Epinephrine 1 mg every 3–5 min", "window_sec": 180, "critical": true},
+        {"action": "Search and treat reversible causes", "window_sec": 240, "critical": true},
+        {"action": "Advanced airway (ETT or SGA)", "window_sec": 300, "critical": false},
+        {"action": "Rhythm reassessment every 2 min", "window_sec": 120, "critical": false}
+      ],
+      "estimated_duration_min": {"beginner": 10, "intermediate": 14, "advanced": 20}
+    },
+    {
+      "template_id": "T003",
+      "title": "Asystole — Non-Shockable Arrest",
+      "rhythm_type": "asystole",
+      "tags": { "level": "beginner", "specialities": ["ER","Medicine","ICU","Allied_Medical"], "locations": ["ER","ICU","Ward_Medical"] },
+      "patient": { "age_range": [60, 85], "sex_options": ["Male","Female"], "weight_range": [55, 80], "presentation": "Found unresponsive, flat line on monitor" },
+      "complications": [],
+      "hints": ["Asystole — confirm in 2 leads. No shock.", "Start CPR. Give epinephrine immediately.", "Look for reversible causes."],
+      "checklist": [
+        {"action": "Recognise arrest — confirm asystole in 2 leads", "window_sec": 30, "critical": true},
+        {"action": "Begin CPR", "window_sec": 30, "critical": true},
+        {"action": "Do NOT defibrillate", "window_sec": 60, "critical": true},
+        {"action": "Epinephrine 1 mg IV stat", "window_sec": 120, "critical": true},
+        {"action": "Advanced airway", "window_sec": 180, "critical": false},
+        {"action": "Identify and treat reversible causes", "window_sec": 240, "critical": true},
+        {"action": "Rhythm reassessment every 2 min", "window_sec": 120, "critical": false}
+      ],
+      "estimated_duration_min": {"beginner": 8, "intermediate": 12, "advanced": 18}
+    },
+    {
+      "template_id": "T004",
+      "title": "PEA Transitioning to VF",
+      "rhythm_type": "PEA_to_VF",
+      "tags": { "level": "intermediate", "specialities": ["ER","ICU","Cardio","Medicine"], "locations": ["ER","ICU","Ward_Cardio"] },
+      "patient": { "age_range": [48, 72], "sex_options": ["Male","Female"], "weight_range": [65, 90], "presentation": "Cardiac arrest — PEA on initial rhythm, then transitions to VF" },
+      "complications": ["Delayed defibrillation (defibrillator not immediately charged)", "Team communication breakdown at rhythm change"],
+      "hints": [],
+      "checklist": [
+        {"action": "Recognise arrest and begin CPR", "window_sec": 30, "critical": true},
+        {"action": "Identify initial PEA — no shock", "window_sec": 90, "critical": true},
+        {"action": "Epinephrine 1 mg", "window_sec": 180, "critical": true},
+        {"action": "Reassess rhythm — identify VF transition", "window_sec": 240, "critical": true},
+        {"action": "Deliver shock for VF (200 J)", "window_sec": 270, "critical": true},
+        {"action": "Resume CPR immediately", "window_sec": 285, "critical": true},
+        {"action": "Second epinephrine if VF persists", "window_sec": 360, "critical": false},
+        {"action": "Amiodarone 300 mg after 2nd shock", "window_sec": 420, "critical": false},
+        {"action": "Consider reversible causes", "window_sec": 300, "critical": false}
+      ],
+      "estimated_duration_min": {"beginner": 10, "intermediate": 14, "advanced": 20}
+    },
+    {
+      "template_id": "T005",
+      "title": "Intraoperative Cardiac Arrest — Anaesthesia",
+      "rhythm_type": "VF",
+      "tags": { "level": "intermediate", "specialities": ["Anaesthesia","Surgery"], "locations": ["Theatre"] },
+      "patient": { "age_range": [40, 65], "sex_options": ["Male","Female"], "weight_range": [65, 95], "presentation": "Intraoperative VF during elective procedure under GA" },
+      "complications": ["Malignant hyperthermia suspected", "Tourniquet in place on limb"],
+      "hints": [],
+      "checklist": [
+        {"action": "Alert surgeon — suspend procedure", "window_sec": 15, "critical": true},
+        {"action": "Turn off volatile agents", "window_sec": 30, "critical": true},
+        {"action": "Begin CPR", "window_sec": 30, "critical": true},
+        {"action": "Identify VF and defibrillate", "window_sec": 120, "critical": true},
+        {"action": "Reduce anaesthetic depth", "window_sec": 60, "critical": false},
+        {"action": "Epinephrine 1 mg", "window_sec": 180, "critical": false},
+        {"action": "Consider MH protocol if temperature rising", "window_sec": 240, "critical": true},
+        {"action": "Dantrolene if MH confirmed", "window_sec": 360, "critical": false},
+        {"action": "Post-ROSC care — ICU transfer", "window_sec": 600, "critical": false}
+      ],
+      "estimated_duration_min": {"beginner": 10, "intermediate": 15, "advanced": 22}
+    },
+    {
+      "template_id": "T006",
+      "title": "Anaphylaxis Progressing to Cardiac Arrest",
+      "rhythm_type": "PEA",
+      "tags": { "level": "intermediate", "specialities": ["ER","Anaesthesia","ICU","Allied_Medical"], "locations": ["ER","Theatre","ICU"] },
+      "patient": { "age_range": [20, 50], "sex_options": ["Male","Female"], "weight_range": [55, 80], "presentation": "Acute anaphylaxis after drug administration, deteriorating to arrest" },
+      "complications": ["Severe laryngeal oedema — difficult airway", "Refractory bronchospasm"],
+      "hints": [],
+      "checklist": [
+        {"action": "Recognise anaphylaxis", "window_sec": 30, "critical": true},
+        {"action": "Remove trigger agent", "window_sec": 30, "critical": true},
+        {"action": "Adrenaline 0.5 mg IM (anaphylaxis dose)", "window_sec": 60, "critical": true},
+        {"action": "Call for senior help / anaesthesiology", "window_sec": 90, "critical": true},
+        {"action": "IV fluid bolus", "window_sec": 120, "critical": false},
+        {"action": "Recognise arrest — begin CPR", "window_sec": 150, "critical": true},
+        {"action": "Adrenaline 1 mg IV (arrest dose)", "window_sec": 180, "critical": true},
+        {"action": "Advanced airway — early surgical airway if needed", "window_sec": 240, "critical": true},
+        {"action": "Identify and treat PEA causes", "window_sec": 300, "critical": false}
+      ],
+      "estimated_duration_min": {"beginner": 12, "intermediate": 16, "advanced": 22}
+    },
+    {
+      "template_id": "T007",
+      "title": "Trauma Arrest — Penetrating Mechanism",
+      "rhythm_type": "PEA",
+      "tags": { "level": "intermediate", "specialities": ["Trauma","ER","Surgery"], "locations": ["ER"] },
+      "patient": { "age_range": [20, 45], "sex_options": ["Male","Female"], "weight_range": [60, 90], "presentation": "GSW to chest, arrested on arrival" },
+      "complications": ["Tension pneumothorax", "Cardiac tamponade"],
+      "hints": [],
+      "checklist": [
+        {"action": "Recognise traumatic cardiac arrest", "window_sec": 15, "critical": true},
+        {"action": "Identify reversible surgical cause", "window_sec": 30, "critical": true},
+        {"action": "Needle decompression bilateral", "window_sec": 60, "critical": true},
+        {"action": "Begin CPR", "window_sec": 30, "critical": true},
+        {"action": "Massive transfusion protocol activation", "window_sec": 120, "critical": true},
+        {"action": "Pericardiocentesis / ED thoracotomy if tamponade", "window_sec": 180, "critical": true},
+        {"action": "Permissive hypotension pre-surgery", "window_sec": 240, "critical": false},
+        {"action": "Surgical team notification", "window_sec": 90, "critical": true}
+      ],
+      "estimated_duration_min": {"beginner": 10, "intermediate": 14, "advanced": 20}
+    },
+    {
+      "template_id": "T008",
+      "title": "Bradycardia with Haemodynamic Compromise",
+      "rhythm_type": "bradycardia_with_pulse",
+      "tags": { "level": "beginner", "specialities": ["Cardio","ER","ICU","Medicine"], "locations": ["ER","Ward_Cardio","ICU"] },
+      "patient": { "age_range": [55, 80], "sex_options": ["Male","Female"], "weight_range": [60, 85], "presentation": "HR 38 bpm, BP 80/50, diaphoretic, chest pain" },
+      "complications": [],
+      "hints": ["Identify 3rd degree AV block on ECG.", "Atropine 0.5 mg first — can repeat.", "Prepare for transcutaneous pacing."],
+      "checklist": [
+        {"action": "Recognise haemodynamic instability", "window_sec": 30, "critical": true},
+        {"action": "12-lead ECG", "window_sec": 90, "critical": true},
+        {"action": "IV access + oxygen", "window_sec": 60, "critical": false},
+        {"action": "Atropine 0.5 mg IV (can repeat to 3 mg)", "window_sec": 120, "critical": true},
+        {"action": "Prepare transcutaneous pacing if atropine fails", "window_sec": 300, "critical": true},
+        {"action": "Analgesia for TCP pain", "window_sec": 360, "critical": false},
+        {"action": "Cardiology consult for transvenous pacing", "window_sec": 480, "critical": false}
+      ],
+      "estimated_duration_min": {"beginner": 8, "intermediate": 12, "advanced": 16}
+    },
+    {
+      "template_id": "T009",
+      "title": "Supraventricular Tachycardia — Unstable",
+      "rhythm_type": "tachyarrhythmia_with_pulse",
+      "tags": { "level": "beginner", "specialities": ["Cardio","ER","ICU","Medicine"], "locations": ["ER","Ward_Cardio","ICU"] },
+      "patient": { "age_range": [30, 60], "sex_options": ["Male","Female"], "weight_range": [55, 85], "presentation": "HR 180 bpm, narrow complex, hypotensive, diaphoretic" },
+      "complications": [],
+      "hints": ["Unstable SVT — proceed to synchronised cardioversion.", "Sedate before cardioversion.", "Synchronise mode ON for cardioversion."],
+      "checklist": [
+        {"action": "Recognise unstable tachyarrhythmia", "window_sec": 30, "critical": true},
+        {"action": "12-lead ECG", "window_sec": 60, "critical": true},
+        {"action": "IV access + O2 + monitoring", "window_sec": 60, "critical": false},
+        {"action": "Sedation before cardioversion", "window_sec": 120, "critical": true},
+        {"action": "Synchronised cardioversion 100 J", "window_sec": 180, "critical": true},
+        {"action": "Confirm rhythm conversion", "window_sec": 210, "critical": true},
+        {"action": "Escalate energy if unsuccessful", "window_sec": 300, "critical": false},
+        {"action": "Expert review post-conversion", "window_sec": 480, "critical": false}
+      ],
+      "estimated_duration_min": {"beginner": 8, "intermediate": 12, "advanced": 18}
+    },
+    {
+      "template_id": "T010",
+      "title": "VT with Pulse — Wide Complex Tachycardia",
+      "rhythm_type": "tachyarrhythmia_with_pulse",
+      "tags": { "level": "intermediate", "specialities": ["Cardio","ER","ICU"], "locations": ["ER","ICU","Ward_Cardio"] },
+      "patient": { "age_range": [50, 75], "sex_options": ["Male","Female"], "weight_range": [65, 90], "presentation": "HR 160 bpm wide complex, BP maintaining 95/60" },
+      "complications": ["Misidentified as SVT — wrong drug given", "Deterioration to VF"],
+      "hints": [],
+      "checklist": [
+        {"action": "12-lead ECG — identify wide complex VT", "window_sec": 60, "critical": true},
+        {"action": "Assess haemodynamic stability", "window_sec": 60, "critical": true},
+        {"action": "Amiodarone 150 mg IV over 10 min", "window_sec": 120, "critical": true},
+        {"action": "Prepare for cardioversion if deteriorates", "window_sec": 180, "critical": true},
+        {"action": "Expert consult — electrophysiology", "window_sec": 300, "critical": false},
+        {"action": "Correct electrolytes (K+, Mg2+)", "window_sec": 240, "critical": false}
+      ],
+      "estimated_duration_min": {"beginner": 10, "intermediate": 15, "advanced": 22}
+    },
+    {
+      "template_id": "T011",
+      "title": "Megacode — Sinus Brady to VF to Asystole",
+      "rhythm_type": "megacode",
+      "tags": { "level": "advanced", "specialities": ["ER","ICU","Cardio","Anaesthesia"], "locations": ["ER","ICU","Theatre"] },
+      "patient": { "age_range": [55, 75], "sex_options": ["Male","Female"], "weight_range": [70, 95], "presentation": "Progressive haemodynamic deterioration — sinus bradycardia → VF → asystole" },
+      "complications": ["Difficult IV access — IO required", "Airway oedema — video laryngoscopy needed", "Medication error — wrong epinephrine dose"],
+      "hints": [],
+      "checklist": [
+        {"action": "Recognise brady — atropine 0.5 mg", "window_sec": 60, "critical": true},
+        {"action": "TCP when atropine fails", "window_sec": 240, "critical": true},
+        {"action": "Recognise VF transition — shock 200 J", "window_sec": 300, "critical": true},
+        {"action": "CPR quality maintenance throughout", "window_sec": 0, "critical": true},
+        {"action": "IO access when IV fails", "window_sec": 360, "critical": true},
+        {"action": "Amiodarone 300 mg after 2nd shock", "window_sec": 420, "critical": false},
+        {"action": "Video laryngoscopy for airway", "window_sec": 480, "critical": false},
+        {"action": "Recognise asystole — cease shocks", "window_sec": 600, "critical": true},
+        {"action": "Epinephrine 1 mg every 3–5 min", "window_sec": 300, "critical": true},
+        {"action": "Team communication closed-loop throughout", "window_sec": 0, "critical": false},
+        {"action": "Consider ECMO / cessation discussion", "window_sec": 900, "critical": false}
+      ],
+      "estimated_duration_min": {"beginner": 15, "intermediate": 20, "advanced": 30}
+    },
+    {
+      "template_id": "T012",
+      "title": "Post-CABG VF — Cardiac Surgery Complication",
+      "rhythm_type": "VF",
+      "tags": { "level": "advanced", "specialities": ["Surgery","Cardio","ICU","Anaesthesia"], "locations": ["ICU","Theatre"] },
+      "patient": { "age_range": [60, 78], "sex_options": ["Male","Female"], "weight_range": [70, 95], "presentation": "VF arrest 6 hours post-CABG in cardiac surgery ICU" },
+      "complications": ["Sternal wound — internal defibrillation may be needed", "Pericardial tamponade", "Graft occlusion"],
+      "hints": [],
+      "checklist": [
+        {"action": "Standard defib pads (avoid sternal area)", "window_sec": 60, "critical": true},
+        {"action": "Alert cardiac surgery team immediately", "window_sec": 30, "critical": true},
+        {"action": "VF → shock 200 J", "window_sec": 120, "critical": true},
+        {"action": "Resume CPR post-shock", "window_sec": 135, "critical": true},
+        {"action": "Epinephrine 1 mg every 3–5 min", "window_sec": 300, "critical": false},
+        {"action": "Consider internal defibrillation / re-sternotomy", "window_sec": 600, "critical": true},
+        {"action": "ECMO team activation", "window_sec": 600, "critical": false},
+        {"action": "Targeted temperature management post-ROSC", "window_sec": 900, "critical": false}
+      ],
+      "estimated_duration_min": {"beginner": 12, "intermediate": 18, "advanced": 25}
+    },
+    {
+      "template_id": "T013",
+      "title": "Pulmonary Embolism — Massive PE with Arrest",
+      "rhythm_type": "PEA",
+      "tags": { "level": "advanced", "specialities": ["ER","ICU","Medicine","Surgery","Ortho"], "locations": ["ER","ICU","Ward_Ortho","Ward_Surgical"] },
+      "patient": { "age_range": [45, 70], "sex_options": ["Male","Female"], "weight_range": [65, 90], "presentation": "Sudden arrest post-orthopaedic surgery, likely PE" },
+      "complications": ["Anticoagulation contraindicated — recent surgery", "Thrombolytics decision under time pressure", "RV failure"],
+      "hints": [],
+      "checklist": [
+        {"action": "Recognise cardiac arrest — begin CPR", "window_sec": 30, "critical": true},
+        {"action": "Diagnose suspected massive PE (PEA, recent surgery, risk factors)", "window_sec": 120, "critical": true},
+        {"action": "Systemic thrombolysis decision — alteplase 50 mg if no contraindication", "window_sec": 180, "critical": true},
+        {"action": "Continue CPR 60–90 min if lytic given", "window_sec": 180, "critical": true},
+        {"action": "Surgical / catheter embolectomy if lytic contraindicated", "window_sec": 240, "critical": false},
+        {"action": "ECMO consideration", "window_sec": 600, "critical": false},
+        {"action": "Echo if available — confirm RV dilation", "window_sec": 300, "critical": false}
+      ],
+      "estimated_duration_min": {"beginner": 12, "intermediate": 18, "advanced": 25}
+    },
+    {
+      "template_id": "T014",
+      "title": "Septic Shock Progressing to Arrest — Ward Call",
+      "rhythm_type": "PEA",
+      "tags": { "level": "intermediate", "specialities": ["Medicine","Surgery","ICU","Allied_Medical"], "locations": ["Ward_Medical","Ward_Surgical"] },
+      "patient": { "age_range": [50, 78], "sex_options": ["Male","Female"], "weight_range": [55, 80], "presentation": "Septic patient deteriorating — BP 70/40, arrest in 2 minutes" },
+      "complications": ["Crash cart delayed 2 minutes", "Narrow field team — 2 nurses only initially"],
+      "hints": [],
+      "checklist": [
+        {"action": "Early recognition — activate code blue", "window_sec": 30, "critical": true},
+        {"action": "Basic airway + BVM ventilation", "window_sec": 60, "critical": true},
+        {"action": "Begin CPR", "window_sec": 90, "critical": true},
+        {"action": "IV access — fluid resuscitation", "window_sec": 120, "critical": false},
+        {"action": "Crash cart arrival — attach defibrillator", "window_sec": 120, "critical": true},
+        {"action": "Epinephrine 1 mg IV", "window_sec": 180, "critical": true},
+        {"action": "Identify sepsis as cause — antibiotics", "window_sec": 300, "critical": false},
+        {"action": "ICU transfer post-ROSC", "window_sec": 600, "critical": false}
+      ],
+      "estimated_duration_min": {"beginner": 10, "intermediate": 14, "advanced": 20}
+    },
+    {
+      "template_id": "T015",
+      "title": "Neurological Arrest — Post-Stroke Complication",
+      "rhythm_type": "VF",
+      "tags": { "level": "intermediate", "specialities": ["Neuro","Medicine","ICU"], "locations": ["Ward_Neuro","ICU"] },
+      "patient": { "age_range": [60, 82], "sex_options": ["Male","Female"], "weight_range": [60, 85], "presentation": "Known stroke on anticoagulation, sudden VF arrest" },
+      "complications": ["Anticoagulation — haemorrhage risk during CPR", "Existing DNR discussion needed"],
+      "hints": [],
+      "checklist": [
+        {"action": "Confirm cardiac arrest", "window_sec": 15, "critical": true},
+        {"action": "Verify resuscitation status / DNACPR", "window_sec": 30, "critical": true},
+        {"action": "If for resus — begin CPR", "window_sec": 45, "critical": true},
+        {"action": "Defibrillate VF — 200 J", "window_sec": 120, "critical": true},
+        {"action": "Epinephrine 1 mg every 3–5 min", "window_sec": 300, "critical": false},
+        {"action": "Anticoagulation reversal (if agent known)", "window_sec": 240, "critical": false},
+        {"action": "Family communication regarding prognosis", "window_sec": 600, "critical": false}
+      ],
+      "estimated_duration_min": {"beginner": 10, "intermediate": 14, "advanced": 20}
+    },
+    {
+      "template_id": "T016",
+      "title": "Physiotherapy-Induced Cardiac Event — Rehab Setting",
+      "rhythm_type": "VF",
+      "tags": { "level": "beginner", "specialities": ["Allied_Medical","Allied_Surgical","Medicine"], "locations": ["Ward_Medical","Ward_Surgical"] },
+      "patient": { "age_range": [55, 75], "sex_options": ["Male","Female"], "weight_range": [60, 90], "presentation": "Cardiac arrest during physiotherapy mobilisation session" },
+      "complications": [],
+      "hints": ["Physiotherapist initiates BLS immediately.", "Call for help — activate code blue.", "Use AED if available."],
+      "checklist": [
+        {"action": "Recognise collapse — safety check", "window_sec": 10, "critical": true},
+        {"action": "Call for help / activate code blue", "window_sec": 20, "critical": true},
+        {"action": "Begin BLS — 30:2 compressions:ventilations", "window_sec": 30, "critical": true},
+        {"action": "AED attached and used if shockable", "window_sec": 120, "critical": true},
+        {"action": "Handover to ACLS team", "window_sec": 240, "critical": true},
+        {"action": "Document time of arrest and interventions", "window_sec": 300, "critical": false}
+      ],
+      "estimated_duration_min": {"beginner": 6, "intermediate": 10, "advanced": 15}
+    },
+    {
+      "template_id": "T017",
+      "title": "Obstetric Cardiac Arrest — Perimortem C-Section Decision",
+      "rhythm_type": "PEA",
+      "tags": { "level": "advanced", "specialities": ["Surgery","Anaesthesia","Medicine","ER"], "locations": ["Theatre","ER"] },
+      "patient": { "age_range": [25, 40], "sex_options": ["Female"], "weight_range": [70, 95], "presentation": "35-week pregnant patient, cardiac arrest on delivery suite" },
+      "complications": ["Aortocaval compression — left tilt CPR needed", "Perimortem C-section at 4 minutes", "Obstetric team coordination"],
+      "hints": [],
+      "checklist": [
+        {"action": "Recognise arrest — left lateral tilt (15–30 deg)", "window_sec": 15, "critical": true},
+        {"action": "Manual uterine displacement during CPR", "window_sec": 30, "critical": true},
+        {"action": "Alert obstetric, paediatric and anaesthetic teams", "window_sec": 30, "critical": true},
+        {"action": "Begin CPR", "window_sec": 30, "critical": true},
+        {"action": "Decision for perimortem C-section at 4 min if no ROSC", "window_sec": 240, "critical": true},
+        {"action": "Neonatal resuscitation team ready", "window_sec": 240, "critical": true},
+        {"action": "Defibrillation if shockable", "window_sec": 120, "critical": true},
+        {"action": "Epinephrine 1 mg", "window_sec": 180, "critical": false}
+      ],
+      "estimated_duration_min": {"beginner": 12, "intermediate": 18, "advanced": 25}
+    },
+    {
+      "template_id": "T018",
+      "title": "Asystole to pVT — Rhythm Transition",
+      "rhythm_type": "asystole_to_pVT",
+      "tags": { "level": "intermediate", "specialities": ["ER","ICU","Cardio"], "locations": ["ER","ICU"] },
+      "patient": { "age_range": [45, 70], "sex_options": ["Male","Female"], "weight_range": [65, 88], "presentation": "Initial asystole transitioning to pulseless VT" },
+      "complications": ["Delay in rhythm reassessment", "Wrong energy selection at rhythm change"],
+      "hints": [],
+      "checklist": [
+        {"action": "Recognise asystole — no shock", "window_sec": 30, "critical": true},
+        {"action": "CPR + epinephrine 1 mg", "window_sec": 120, "critical": true},
+        {"action": "Rhythm reassessment — identify pVT", "window_sec": 180, "critical": true},
+        {"action": "Defibrillate pVT — 200 J biphasic", "window_sec": 210, "critical": true},
+        {"action": "Resume CPR immediately post-shock", "window_sec": 225, "critical": true},
+        {"action": "Amiodarone 300 mg after 2nd shock", "window_sec": 420, "critical": false},
+        {"action": "Consider reversible causes", "window_sec": 300, "critical": false}
+      ],
+      "estimated_duration_min": {"beginner": 10, "intermediate": 14, "advanced": 20}
+    }
+  ]
+}

@@ -114,6 +114,24 @@ async def init_db():
                 )
             """)
 
+            # Debrief Reports table
+            await cur.execute("""
+                CREATE TABLE IF NOT EXISTS debrief_reports (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    session_id INT NULL,
+                    session_code VARCHAR(50) NOT NULL UNIQUE,
+                    overall_score FLOAT,
+                    grade VARCHAR(10),
+                    status VARCHAR(50) NOT NULL DEFAULT 'COMPLETED',
+                    debrief_data JSON,
+                    pdf_path VARCHAR(255),
+                    error_message TEXT,
+                    created_at DATETIME NOT NULL,
+                    updated_at DATETIME NOT NULL,
+                    FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE SET NULL
+                )
+            """)
+
             # Add current_scenario_id if missing
             await cur.execute(
                 "SHOW COLUMNS FROM sessions LIKE 'current_scenario_id'"
@@ -205,3 +223,96 @@ async def init_db():
 async def get_db_pool():
     global pool
     return pool
+
+
+async def save_debrief_report_async(report_data: dict) -> bool:
+    """
+    Save or update a debrief report record in MySQL database.
+    """
+    session_code = str(report_data.get("session_code", report_data.get("session_id", "UNKNOWN")))
+    overall_score = float(report_data.get("overall_score", 0.0))
+    grade = str(report_data.get("grade", "N/A"))
+    status = str(report_data.get("status", "COMPLETED"))
+    debrief_data_json = json.dumps(report_data.get("debrief_data", report_data))
+    pdf_path = str(report_data.get("pdf_path", ""))
+    error_message = report_data.get("error_message")
+    from datetime import datetime
+    now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+
+    try:
+        conn = await aiomysql.connect(
+            host=MYSQL_HOST,
+            port=MYSQL_PORT,
+            user=MYSQL_USER,
+            password=MYSQL_PASSWORD,
+            db=DB_NAME,
+            autocommit=True,
+            ssl=ssl_ctx
+        )
+        try:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                # Find matching session_id if exists in sessions table, or create session record
+                await cur.execute("SELECT id FROM sessions WHERE session_code = %s", (session_code,))
+                sess_row = await cur.fetchone()
+                if sess_row:
+                    db_session_id = sess_row["id"]
+                else:
+                    await cur.execute("SELECT id FROM users LIMIT 1")
+                    user_row = await cur.fetchone()
+                    user_id = user_row["id"] if user_row else 1
+                    try:
+                        await cur.execute(
+                            "INSERT INTO sessions (session_code, created_by, started_at, is_active) VALUES (%s, %s, %s, 0)",
+                            (session_code, user_id, now_str)
+                        )
+                        db_session_id = cur.lastrowid
+                    except Exception:
+                        await cur.execute("SELECT id FROM sessions WHERE session_code = %s", (session_code,))
+                        sess_row = await cur.fetchone()
+                        db_session_id = sess_row["id"] if sess_row else None
+
+                query = """
+                    INSERT INTO debrief_reports
+                    (session_id, session_code, overall_score, grade, status, debrief_data, pdf_path, error_message, created_at, updated_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE
+                    session_id = VALUES(session_id),
+                    overall_score = VALUES(overall_score),
+                    grade = VALUES(grade),
+                    status = VALUES(status),
+                    debrief_data = VALUES(debrief_data),
+                    pdf_path = VALUES(pdf_path),
+                    error_message = VALUES(error_message),
+                    updated_at = VALUES(updated_at)
+                """
+                await cur.execute(query, (
+                    db_session_id, session_code, overall_score, grade, status,
+                    debrief_data_json, pdf_path, error_message, now_str, now_str
+                ))
+                print(f"[DB] Debrief report saved/updated successfully in MySQL for session_code: {session_code}")
+                return True
+        finally:
+            conn.close()
+    except Exception as e:
+        print(f"[DB] Error saving debrief report for {session_code}: {e}")
+        return False
+
+
+def save_debrief_report_sync(report_data: dict) -> bool:
+    """Synchronous wrapper for save_debrief_report_async."""
+    import asyncio
+    try:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            loop.create_task(save_debrief_report_async(report_data))
+            return True
+        else:
+            return asyncio.run(save_debrief_report_async(report_data))
+    except Exception as e:
+        print(f"[DB] Error in save_debrief_report_sync: {e}")
+        return False
+

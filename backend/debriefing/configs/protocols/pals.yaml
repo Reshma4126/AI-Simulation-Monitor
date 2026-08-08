@@ -1,0 +1,32 @@
+extends: base
+protocol_id: pals
+display_name: "AHA 2020 Pediatric Cardiac Arrest"
+patient_type: pediatric
+guideline_version: "AHA 2020 PALS"
+
+timing_windows:
+  cpr_initiation_ms: 10000
+  pre_shock_pause_max_ms: 10000
+  rhythm_check_interval_ms: 120000
+  epinephrine_interval_ms: 300000
+
+compression:
+  rate_min: 100
+  rate_max: 120
+  depth_cm_min: 4.0              # different from adult
+  depth_cm_max: 5.0
+  ratio_1_rescuer: "30:2"
+  ratio_2_rescuer: "15:2"        # PALS-specific
+
+shockable_rhythms: [VF, pVT]
+non_shockable_rhythms: [PEA, asystole]
+
+drug_rules:
+  epinephrine:
+    dose_mg_per_kg: 0.01         # weight-based — different from adult
+    route: IV
+    repeat_interval_ms: 300000
+  amiodarone:
+    dose_mg_per_kg: 5.0
+    applicable_rhythms: [VF, pVT]
+    contraindicated_rhythms: [PEA, asystole]

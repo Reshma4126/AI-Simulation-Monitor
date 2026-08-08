@@ -8,7 +8,7 @@ import type { ServerMsg } from "../types/wsProtocol";
 import { useECGStore } from "../store/ecgStore";
 
 function getWsUrl(): string {
-  const envUrl = import.meta.env.VITE_WS_URL || import.meta.env.VITE_BACKEND_URL || "https://imsr2-a3xs.onrender.com";
+  const envUrl = import.meta.env.VITE_WS_URL || import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
   const base = envUrl.replace(/\/$/, "");
   if (base.startsWith("ws://") || base.startsWith("wss://")) {
     return `${base}/ws/ecg`;

@@ -9,7 +9,9 @@ from contextlib import asynccontextmanager
 
 import socketio
 import aiomysql
-from fastapi import FastAPI, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
+from pathlib import Path
+from fastapi import FastAPI, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, BackgroundTasks
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from auth import (
@@ -47,17 +49,22 @@ async def lifespan(app: FastAPI):
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         async with conn.cursor(aiomysql.DictCursor) as cur:
-            # Use INSERT IGNORE to safely skip if users already exist
-            await cur.execute(
-                "INSERT IGNORE INTO users (username, password_hash, role, created_at) VALUES (%s, %s, %s, %s)",
-                ("instructor", hash_password("instructor123"), "instructor", datetime.utcnow())
-            )
-            await cur.execute(
-                "INSERT IGNORE INTO users (username, password_hash, role, created_at) VALUES (%s, %s, %s, %s)",
-                ("student", hash_password("student123"), "student", datetime.utcnow())
-            )
+            await cur.execute("SELECT username FROM users WHERE username IN ('instructor', 'student')")
+            existing_rows = await cur.fetchall()
+            existing_users = {r["username"] for r in existing_rows}
+
+            if "instructor" not in existing_users:
+                await cur.execute(
+                    "INSERT INTO users (username, password_hash, role, created_at) VALUES (%s, %s, %s, %s)",
+                    ("instructor", hash_password("instructor123"), "instructor", datetime.utcnow())
+                )
+            if "student" not in existing_users:
+                await cur.execute(
+                    "INSERT INTO users (username, password_hash, role, created_at) VALUES (%s, %s, %s, %s)",
+                    ("student", hash_password("student123"), "student", datetime.utcnow())
+                )
             await conn.commit()
-            
+
             await cur.execute("SELECT COUNT(*) as count FROM users")
             res = await cur.fetchone()
             print(f"[INIT] Users in database: {res['count']}")
@@ -244,8 +251,53 @@ async def get_session_history(
     return {"history": history[-limit:]}
 
 
+# ── Debrief Pipeline Integration ──────────────────────────────────
+DEBRIEF_STATUS_CACHE: dict = {}
+
+async def _run_background_debrief(session_code: str):
+    print(f"[BACKGROUND DEBRIEF] Starting debrief generation for session: {session_code}")
+    DEBRIEF_STATUS_CACHE[session_code] = "running"
+    try:
+        pool = await get_db_pool()
+        async with pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute("SELECT * FROM sessions WHERE session_code = %s", (session_code,))
+                session = await cur.fetchone()
+                if not session:
+                    print(f"[BACKGROUND DEBRIEF] Session '{session_code}' not found")
+                    DEBRIEF_STATUS_CACHE[session_code] = "failed"
+                    return
+
+                await cur.execute("SELECT state_data FROM monitor_state WHERE session_id = %s", (session["id"],))
+                state_row = await cur.fetchone()
+                monitor_state = json.loads(state_row["state_data"]) if state_row else {}
+
+        import asyncio
+        from debrief_adapter import convert_and_debrief
+
+        loop = asyncio.get_running_loop()
+        raw_log = json.loads(session["event_log"]) if session.get("event_log") else []
+
+        result = await loop.run_in_executor(
+            None,
+            convert_and_debrief,
+            session,
+            raw_log,
+            monitor_state
+        )
+        DEBRIEF_STATUS_CACHE[session_code] = "completed"
+        print(f"[BACKGROUND DEBRIEF] Successfully completed debrief for {session_code}. Score: {result.get('overall_score')}")
+    except Exception as e:
+        DEBRIEF_STATUS_CACHE[session_code] = "failed"
+        print(f"[BACKGROUND DEBRIEF] Error running debrief for session {session_code}: {e}")
+
+
 @api_app.post("/session/{session_code}/end")
-async def end_session(session_code: str, user: dict = Depends(require_instructor)):
+async def end_session(
+    session_code: str,
+    background_tasks: BackgroundTasks,
+    user: dict = Depends(require_instructor)
+):
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         async with conn.cursor(aiomysql.DictCursor) as cur:
@@ -262,7 +314,123 @@ async def end_session(session_code: str, user: dict = Depends(require_instructor
     # Emit session_ended to all connected clients
     await emit_session_ended(session_code)
 
-    return {"message": "Session ended"}
+    # Trigger background debrief generation asynchronously
+    DEBRIEF_STATUS_CACHE[session_code] = "running"
+    background_tasks.add_task(_run_background_debrief, session_code)
+
+    return {"message": "Session ended", "debrief_status": "running"}
+
+
+# ── Debrief API Endpoints ──────────────────────────────────────────
+
+@api_app.post("/api/debrief/generate/{session_code}")
+async def generate_debrief_endpoint(
+    session_code: str,
+    background_tasks: BackgroundTasks,
+    user: dict = Depends(get_current_user),
+):
+    """Manually trigger background debrief generation for a session."""
+    DEBRIEF_STATUS_CACHE[session_code] = "running"
+    background_tasks.add_task(_run_background_debrief, session_code)
+    return {
+        "session_code": session_code,
+        "status": "running",
+        "message": "Debrief generation launched in background"
+    }
+
+
+@api_app.get("/api/debrief/status/{session_code}")
+async def get_debrief_status(
+    session_code: str,
+    user: dict = Depends(get_current_user),
+):
+    """Return status: pending | running | completed | failed."""
+    if session_code in DEBRIEF_STATUS_CACHE:
+        return {
+            "session_code": session_code,
+            "status": DEBRIEF_STATUS_CACHE[session_code]
+        }
+
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute("SELECT status FROM debrief_reports WHERE session_code = %s", (session_code,))
+            row = await cur.fetchone()
+            if row:
+                status = str(row["status"]).lower()
+                return {"session_code": session_code, "status": status}
+
+            await cur.execute("SELECT id FROM sessions WHERE session_code = %s", (session_code,))
+            session = await cur.fetchone()
+            if session:
+                return {"session_code": session_code, "status": "pending"}
+
+    return {"session_code": session_code, "status": "pending"}
+
+
+@api_app.get("/api/debrief/{session_code}")
+async def get_debrief_report(
+    session_code: str,
+    user: dict = Depends(get_current_user),
+):
+    """Return full debrief report object."""
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute("SELECT * FROM debrief_reports WHERE session_code = %s", (session_code,))
+            row = await cur.fetchone()
+            if not row:
+                status = DEBRIEF_STATUS_CACHE.get(session_code, "pending")
+                if status in ("running", "pending"):
+                    return {
+                        "session_code": session_code,
+                        "status": status,
+                        "message": "Debrief report is currently being generated"
+                    }
+                raise HTTPException(status_code=404, detail=f"Debrief report for '{session_code}' not found")
+
+    debrief_data = json.loads(row["debrief_data"]) if row.get("debrief_data") else {}
+    return {
+        "session_code": session_code,
+        "overall_score": row["overall_score"],
+        "grade": row["grade"],
+        "status": row["status"],
+        "pdf_path": row["pdf_path"],
+        "error_message": row.get("error_message"),
+        "created_at": row["created_at"].isoformat() if hasattr(row["created_at"], "isoformat") else str(row["created_at"]),
+        "updated_at": row["updated_at"].isoformat() if hasattr(row["updated_at"], "isoformat") else str(row["updated_at"]),
+        "debrief": debrief_data,
+    }
+
+
+@api_app.get("/api/reports/{session_code}")
+async def get_report_pdf(
+    session_code: str,
+    user: dict = Depends(get_current_user),
+):
+    """Stream generated PDF report."""
+    pdf_path = None
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute("SELECT pdf_path FROM debrief_reports WHERE session_code = %s", (session_code,))
+            row = await cur.fetchone()
+            if row and row.get("pdf_path"):
+                pdf_path = Path(row["pdf_path"])
+
+    if not pdf_path or not pdf_path.exists():
+        fallback = Path(__file__).parent / "debriefing" / "output" / "reports" / f"{session_code}_debrief.pdf"
+        if fallback.exists():
+            pdf_path = fallback
+
+    if not pdf_path or not pdf_path.exists():
+        raise HTTPException(status_code=404, detail=f"PDF report for session '{session_code}' not found or not generated yet")
+
+    return FileResponse(
+        path=str(pdf_path),
+        media_type="application/pdf",
+        filename=f"{session_code}_debrief.pdf"
+    )
 
 
 # ── WebSocket (SimMan ECG Engine) ─────────────────────────────────

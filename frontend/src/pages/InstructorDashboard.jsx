@@ -16,7 +16,7 @@ import ScenarioDrawer from "../components/instructor/ScenarioDrawer";
 
 import InstructorParameterModal from "../components/dialogs/InstructorParameterModal";
 
-const API = import.meta.env.VITE_BACKEND_URL || "https://imsr2-a3xs.onrender.com";
+const API = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
 
 export default function InstructorDashboard() {
   const [sessionCode, setSessionCode] = useState("");
@@ -92,7 +92,22 @@ export default function InstructorDashboard() {
 
     initSession();
 
-    const handleStateUpdate = (state) => setFullState(state);
+    const handleStateUpdate = (state) => {
+      setFullState(state);
+      useECGStore.getState().onState({
+        heart_rate: state.HR ?? state.heartRate ?? 80,
+        spo2: state.SpO2 ?? state.spo2 ?? 98,
+        sys_bp: state.ABP_sys ?? state.sysBP ?? 120,
+        dia_bp: state.ABP_dia ?? state.diaBP ?? 80,
+        pap_sys: state.PAP_sys ?? state.papSys ?? 25,
+        pap_dia: state.PAP_dia ?? state.papDia ?? 10,
+        etco2: state.etCO2 ?? state.etco2 ?? 38,
+        resp_rate: state.avRR ?? state.respRate ?? 12,
+        rhythm: state.rhythm ?? state.ecgRhythm ?? "NSR",
+        transfer_time: state.transfer_time ?? 0,
+        transfer_fn: state.transfer_fn ?? "IMMEDIATE",
+      });
+    };
     const handleAlarmUpdate = (data) => {
       useMonitorStore.setState({ alarms: data.alarms });
       
@@ -108,7 +123,17 @@ export default function InstructorDashboard() {
       }
     };
     
-    const handleRhythmChange = (data) => setFullState(data);
+    const handleRhythmChange = (data) => {
+      setFullState(data);
+      if (data.rhythm || data.HR) {
+        useECGStore.getState().onState({
+          heart_rate: data.HR ?? 80,
+          rhythm: data.rhythm ?? "NSR",
+          spo2: 98, sys_bp: 120, dia_bp: 80, pap_sys: 25, pap_dia: 10, etco2: 38, resp_rate: 12,
+          transfer_time: 0, transfer_fn: "IMMEDIATE"
+        });
+      }
+    };
     const handleSessionEvent = (entry) => appendEvent(entry);
     const handleSessionEnded = () => setSessionEnded();
     const handleError = (data) => console.error("[SIO Error]", data.message);

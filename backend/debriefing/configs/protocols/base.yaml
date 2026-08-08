@@ -1,0 +1,40 @@
+# Base protocol config — all disease protocols inherit from this.
+# Adding a new disease = new YAML file, zero code change.
+
+version: "1.0"
+protocol_id: base
+display_name: "Base Protocol"
+patient_type: generic
+
+# Timing windows in milliseconds
+timing_windows:
+  cpr_initiation_ms: 10000
+  pre_shock_pause_max_ms: 10000
+  post_shock_cpr_delay_max_ms: 10000
+  rhythm_check_interval_ms: 120000
+  epinephrine_interval_ms: 300000
+  epinephrine_max_interval_ms: 360000
+
+# Compression quality (audio-inferred only — no SimMan)
+compression:
+  rate_min: 100
+  rate_max: 120
+  depth_cm_min: 5.0
+  depth_cm_max: 6.0
+  ccf_target: 0.80
+  ccf_source: "audio_inferred"    # flags that CCF cannot be computed without SimMan
+
+# Scoring domain weights — must sum to 1.0
+domain_weights:
+  cpr_quality:         0.30
+  shock_delivery:      0.20
+  drug_administration: 0.20
+  rhythm_recognition:  0.10
+  team_leadership:     0.10
+  team_communication:  0.10
+
+# Domains unavailable without SimMan (flagged in report)
+simman_dependent_metrics:
+  - chest_compression_fraction
+  - exact_compression_depth
+  - exact_compression_rate

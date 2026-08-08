@@ -35,6 +35,7 @@ export default function App() {
         <Route path="/instructor" element={<InstructorDashboard />} />
         <Route path="/completed" element={<SimulationCompletedPage />} />
         <Route path="/debrief" element={<DebriefPage />} />
+        <Route path="/debrief/:sessionCode" element={<DebriefPage />} />
         <Route path="/sessions" element={<SessionsPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/settings" element={<SettingsPage />} />

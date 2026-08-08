@@ -7,12 +7,26 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      "/auth": "https://imsr2-a3xs.onrender.com/",
-      "/session": "https://imsr2-a3xs.onrender.com/",
-      "/meta": "https://imsr2-a3xs.onrender.com/",
+      "/api": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+      "/auth": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+      "/session": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+      "/meta": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
       "/socket.io": {
-        target: "https://imsr2-a3xs.onrender.com/",
+        target: "http://localhost:8000",
         ws: true,
+        changeOrigin: true,
       },
     },
   },

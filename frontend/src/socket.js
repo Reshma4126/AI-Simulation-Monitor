@@ -1,6 +1,6 @@
 import { io } from "socket.io-client";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "https://imsr2-a3xs.onrender.com";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
 
 const socket = io(BACKEND_URL, {
   autoConnect: false,

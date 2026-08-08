@@ -143,45 +143,28 @@ export const useECGStore = create<ECGStore>((set, get) => ({
       transferTime: state.transfer_time,
       transferFn: state.transfer_fn,
     });
-    set((current) => ({
+    set(() => ({
       ecgState: state,
-      heartRate: current.ecgState === null
-        ? Math.round(state.heart_rate)
-        : current.heartRate,
-      liveHeartRate: Math.round(state.heart_rate),
-      spo2: current.ecgState === null
-        ? Math.round(state.spo2 ?? 98)
-        : current.spo2,
+      heartRate: Math.round(state.heart_rate ?? 80),
+      liveHeartRate: Math.round(state.heart_rate ?? 80),
+      spo2: Math.round(state.spo2 ?? 98),
       liveSpo2: Math.round(state.spo2 ?? 98),
-      sysBP: current.ecgState === null
-        ? Math.round(state.sys_bp ?? 120)
-        : current.sysBP,
+      sysBP: Math.round(state.sys_bp ?? 120),
       liveSysBP: Math.round(state.sys_bp ?? 120),
-      diaBP: current.ecgState === null
-        ? Math.round(state.dia_bp ?? 80)
-        : current.diaBP,
+      diaBP: Math.round(state.dia_bp ?? 80),
       liveDiaBP: Math.round(state.dia_bp ?? 80),
-      papSys: current.ecgState === null
-        ? Math.round(state.pap_sys ?? 25)
-        : current.papSys,
+      papSys: Math.round(state.pap_sys ?? 25),
       livePapSys: Math.round(state.pap_sys ?? 25),
-      papDia: current.ecgState === null
-        ? Math.round(state.pap_dia ?? 10)
-        : current.papDia,
+      papDia: Math.round(state.pap_dia ?? 10),
       livePapDia: Math.round(state.pap_dia ?? 10),
-      etco2: current.ecgState === null
-        ? Math.round(state.etco2 ?? 38)
-        : current.etco2,
+      etco2: Math.round(state.etco2 ?? 38),
       liveEtco2: Math.round(state.etco2 ?? 38),
-      respRate: current.ecgState === null
-        ? Math.round(state.resp_rate ?? 12)
-        : current.respRate,
+      respRate: Math.round(state.resp_rate ?? 12),
       liveRespRate: Math.round(state.resp_rate ?? 12),
       severity: RHYTHM_SEVERITY[state.rhythm as keyof typeof RHYTHM_SEVERITY] ?? "normal",
       rhythm:   state.rhythm,
-      transferTime: state.transfer_time,
-      transferFn: state.transfer_fn,
-      // Sync rhythm intelligence from static table on state snapshot
+      transferTime: state.transfer_time ?? 0,
+      transferFn: state.transfer_fn ?? "IMMEDIATE",
       rhythmIntelligence: RHYTHM_INTELLIGENCE[state.rhythm as keyof typeof RHYTHM_INTELLIGENCE] ?? null,
     }));
   },
@@ -227,6 +210,10 @@ export const useECGStore = create<ECGStore>((set, get) => ({
     }));
   },
 
+  sendCommand: (update) => {
+    const fn = get()._sendFn;
+    if (fn) fn(update);
+  },
   _setSendFn: (fn) => set({ _sendFn: fn }),
 }));
 
