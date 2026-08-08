@@ -154,11 +154,22 @@ export default function ScenarioStudioPage() {
   const handleLaunch = async () => {
     if (!spec) return;
     const token = sessionStorage.getItem("token");
-    const sessionCode = sessionStorage.getItem("session_code");
+    let sessionCode = sessionStorage.getItem("session_code");
 
     if (!sessionCode) {
-      alert("No active session code found. Please ensure you are logged in correctly.");
-      return;
+      try {
+        const initRes = await fetch(`${API}/session/create`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const initData = await initRes.json();
+        sessionCode = initData.session_code;
+        sessionStorage.setItem("session_code", sessionCode);
+      } catch (err) {
+        console.error("Failed to create session code on the fly:", err);
+        alert("Failed to create a session. Please return to the Dashboard first.");
+        return;
+      }
     }
 
     try {

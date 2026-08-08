@@ -239,6 +239,12 @@ export default function InstructorDashboard() {
     setOpenDialog(key);
   }, []);
 
+  const handleLogout = () => {
+    sessionStorage.clear();
+    navigate("/");
+  };
+
+
   return (
     <div className="instructor-dashboard redesign">
       

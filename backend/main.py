@@ -215,6 +215,28 @@ async def get_session_state(session_code: str, user: dict = Depends(get_current_
     return state
 
 
+@api_app.get("/session/{session_code}/info")
+async def get_session_info(session_code: str, user: dict = Depends(get_current_user)):
+    """Return basic session timing and status info."""
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(
+                "SELECT session_code, started_at, ended_at, is_active FROM sessions WHERE session_code = %s",
+                (session_code,)
+            )
+            session = await cur.fetchone()
+            if not session:
+                raise HTTPException(status_code=404, detail="Session not found")
+
+    return {
+        "session_code": session["session_code"],
+        "started_at": session["started_at"].isoformat() if session["started_at"] else None,
+        "ended_at": session["ended_at"].isoformat() if session["ended_at"] else None,
+        "is_active": bool(session["is_active"]),
+    }
+
+
 @api_app.get("/session/{session_code}/log")
 async def get_session_log(session_code: str, user: dict = Depends(get_current_user)):
     pool = await get_db_pool()
@@ -344,28 +366,74 @@ async def get_debrief_status(
     session_code: str,
     user: dict = Depends(get_current_user),
 ):
-    """Return status: pending | running | completed | failed."""
-    if session_code in DEBRIEF_STATUS_CACHE:
-        return {
-            "session_code": session_code,
-            "status": DEBRIEF_STATUS_CACHE[session_code]
-        }
-
+    """Return status: pending | running | completed | failed.
+    DB is always authoritative; in-memory cache is a live-generation fallback.
+    """
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         async with conn.cursor(aiomysql.DictCursor) as cur:
             await cur.execute("SELECT status FROM debrief_reports WHERE session_code = %s", (session_code,))
             row = await cur.fetchone()
             if row:
-                status = str(row["status"]).lower()
-                return {"session_code": session_code, "status": status}
+                db_status = str(row["status"]).lower()
+                # Sync cache with DB truth
+                DEBRIEF_STATUS_CACHE[session_code] = db_status
+                return {"session_code": session_code, "status": db_status}
 
+    # No DB record — fall back to in-memory cache (active generation)
+    if session_code in DEBRIEF_STATUS_CACHE:
+        return {
+            "session_code": session_code,
+            "status": DEBRIEF_STATUS_CACHE[session_code]
+        }
+
+    # No record at all — check session exists
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
             await cur.execute("SELECT id FROM sessions WHERE session_code = %s", (session_code,))
             session = await cur.fetchone()
             if session:
                 return {"session_code": session_code, "status": "pending"}
 
     return {"session_code": session_code, "status": "pending"}
+
+
+@api_app.get("/api/debrief/list")
+async def list_debrief_reports(
+    limit: int = Query(20),
+    user: dict = Depends(get_current_user),
+):
+    """Return a list of completed debrief reports for display on the Reports page."""
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(
+                """SELECT dr.session_code, dr.overall_score, dr.grade, dr.status,
+                          dr.created_at, dr.updated_at,
+                          s.started_at, s.ended_at
+                   FROM debrief_reports dr
+                   LEFT JOIN sessions s ON s.session_code = dr.session_code
+                   WHERE dr.status = 'COMPLETED'
+                   ORDER BY dr.updated_at DESC
+                   LIMIT %s""",
+                (limit,)
+            )
+            rows = await cur.fetchall()
+
+    results = []
+    for row in rows:
+        results.append({
+            "session_code": row["session_code"],
+            "overall_score": row["overall_score"],
+            "grade": row["grade"],
+            "status": str(row["status"]).lower(),
+            "created_at": row["created_at"].isoformat() if row["created_at"] else None,
+            "updated_at": row["updated_at"].isoformat() if row["updated_at"] else None,
+            "started_at": row["started_at"].isoformat() if row.get("started_at") else None,
+            "ended_at": row["ended_at"].isoformat() if row.get("ended_at") else None,
+        })
+    return {"reports": results, "total": len(results)}
 
 
 @api_app.get("/api/debrief/{session_code}")
@@ -433,7 +501,8 @@ async def get_report_pdf(
     )
 
 
-# ── Scenario Studio Integration & API Endpoints ────────────────────
+
+
 
 import sys
 import os

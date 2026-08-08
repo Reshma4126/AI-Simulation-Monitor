@@ -41,6 +41,7 @@ def decode_token(token: str) -> dict:
         payload = jwt.decode(clean_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         return payload
     except JWTError as e:
+        print(f"[AUTH ERROR] Failed to decode token: {clean_token[:15]}... Error: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid or expired token: {e}",

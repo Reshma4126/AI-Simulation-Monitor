@@ -27,6 +27,16 @@ export default function SimulationCompletedPage() {
         });
         if (res.ok) {
           const statusData = await res.json();
+          
+          // If still pending, trigger generation
+          if (statusData.status === "pending") {
+            await fetch(`${API_BASE}/api/debrief/generate/${sessionCode}`, {
+              method: "POST",
+              headers: token ? { Authorization: `Bearer ${token}` } : {},
+            }).catch(() => {});
+            return false; // keep polling
+          }
+          
           if (statusData.status === "completed") {
             const reportRes = await fetch(`${API_BASE}/api/debrief/${sessionCode}`, {
               headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -35,14 +45,35 @@ export default function SimulationCompletedPage() {
               const report = await reportRes.json();
               setScore(report.overall_score);
               
-              // Format duration from ms
-              const ms = report.debrief?.duration_ms || 0;
-              const totalSecs = Math.floor(ms / 1000);
-              const mins = Math.floor(totalSecs / 60);
-              const secs = totalSecs % 60;
-              setDurationStr(`${mins} Mins ${secs} Sec`);
-              
-              setScenarioName(report.debrief?.scenario_name || "ACLS Scenario");
+              // scenario_name lives in narrative_report.scenario_name (from to_dict())
+              const narrativeRaw = report.debrief?.narrative_report || {};
+              const scenarioFromReport =
+                narrativeRaw.scenario_name ||
+                report.debrief?.scenario_name ||
+                "ACLS Scenario";
+              setScenarioName(scenarioFromReport);
+
+              // Duration: compute from session info endpoint
+              const sessionRes = await fetch(`${API_BASE}/session/${sessionCode}/info`, {
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
+              }).catch(() => null);
+              if (sessionRes?.ok) {
+                const sessionData = await sessionRes.json();
+                const startedAt = sessionData.started_at || sessionData.session?.started_at;
+                const endedAt = sessionData.ended_at || sessionData.session?.ended_at;
+                if (startedAt && endedAt) {
+                  const durationMs = new Date(endedAt) - new Date(startedAt);
+                  const totalSecs = Math.floor(durationMs / 1000);
+                  const mins = Math.floor(totalSecs / 60);
+                  const secs = totalSecs % 60;
+                  setDurationStr(`${mins} Min${mins !== 1 ? "s" : ""} ${secs} Sec`);
+                } else {
+                  setDurationStr("Session completed");
+                }
+              } else {
+                setDurationStr("Session completed");
+              }
+
               setLoading(false);
               return true; // Stop polling
             }

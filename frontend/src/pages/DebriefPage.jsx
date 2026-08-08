@@ -183,7 +183,28 @@ export default function DebriefPage() {
   const findings = debrief.findings || [];
   const timelineEvents = debrief.timeline?.events || [];
   const domainScores = debrief.domain_scores || [];
-  const narrative = debrief.narrative_report || {};
+  // narrative_report.to_dict() nests sections under a "sections" key;
+  // fall back to the top-level keys for backward compatibility.
+  const narrativeRaw = debrief.narrative_report || {};
+  const narrative = narrativeRaw.sections || narrativeRaw;
+  const scenarioName =
+    narrativeRaw.scenario_name ||
+    debrief.scenario_name ||
+    debriefData?.scenario_name ||
+    "ACLS Cardiac Arrest Simulation";
+  // reflective_prompts can be a string (JSON array) or direct array
+  let reflectivePrompts = [];
+  try {
+    const rawPrompts = narrative.reflective_prompts;
+    if (Array.isArray(rawPrompts)) reflectivePrompts = rawPrompts;
+    else if (typeof rawPrompts === "string" && rawPrompts.trim()) {
+      const parsed = JSON.parse(rawPrompts);
+      if (Array.isArray(parsed)) reflectivePrompts = parsed;
+      else reflectivePrompts = rawPrompts.split(/\n+/).filter(Boolean);
+    }
+  } catch {
+    // keep empty array
+  }
 
   return (
     <div className="medsim-dashboard-page">
@@ -301,7 +322,7 @@ export default function DebriefPage() {
               <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div className="space-y-1">
                   <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Scenario</span>
-                  <div className="text-base font-bold text-slate-900">Adult ACLS Cardiac Arrest</div>
+                  <div className="text-base font-bold text-slate-900">{scenarioName}</div>
                   <div className="text-xs text-slate-500">Session ID: {sessionCode}</div>
                 </div>
 
@@ -470,7 +491,7 @@ export default function DebriefPage() {
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   {narrative.communication_analysis ||
-                    "Closed-loop communication evaluated across team leadership, medication execution, and callout responses. Team leadership maintained active task allocation throughout resuscitation intervals."}
+                    "Communication patterns were analyzed across all team roles. Closed-loop communication was evaluated for medication orders, rhythm checks, and team callouts."}
                 </p>
               </div>
 
@@ -482,7 +503,7 @@ export default function DebriefPage() {
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   {narrative.strengths ||
-                    "Prompt recognition of pulseless cardiac arrest, immediate initiation of high-quality chest compressions, and clear team role distribution."}
+                    "Performance data from this session is being analyzed. Strengths will be displayed once the AI report is fully generated."}
                 </p>
               </div>
 
@@ -496,11 +517,7 @@ export default function DebriefPage() {
                   {narrative.recommendations ? (
                     <p>{narrative.recommendations}</p>
                   ) : (
-                    <ul className="list-disc list-inside space-y-1">
-                      <li>Minimize hands-off time immediately post-shock delivery (&lt;10s target).</li>
-                      <li>Ensure 12-lead ECG is obtained immediately following ROSC.</li>
-                      <li>Document airway opening technique and ventilation frequency.</li>
-                    </ul>
+                    <p className="text-xs text-slate-500 italic">Recommendations will appear once the AI report has finished generating for this session.</p>
                   )}
                 </div>
               </div>
@@ -512,14 +529,14 @@ export default function DebriefPage() {
                   Reflective Debrief Prompts
                 </h3>
                 <div className="space-y-2">
-                  {[
+                  {(reflectivePrompts.length > 0 ? reflectivePrompts : [
                     "How effectively did the team maintain continuous chest compressions during rhythm analysis?",
                     "What strategies can be implemented to streamline post-ROSC 12-lead ECG acquisition?",
                     "How was closed-loop communication utilized when ordering and administering epinephrine?",
-                  ].map((q, idx) => (
+                  ]).map((q, idx) => (
                     <div key={idx} className="p-3 rounded-xl bg-teal-50/50 border border-teal-100 flex items-start gap-2.5 text-xs text-slate-700">
                       <ChevronRight className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
-                      <span>{q}</span>
+                      <span>{typeof q === "string" ? q : q.question || q.prompt || JSON.stringify(q)}</span>
                     </div>
                   ))}
                 </div>
