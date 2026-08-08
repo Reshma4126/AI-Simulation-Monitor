@@ -59,11 +59,28 @@ export default function CardiacControls({ sessionCode, onClose }) {
     if (onClose) onClose();
   };
 
+  const handleQuickAction = (actionLabel, eventMessage) => {
+    socket.emit("add_event_log", {
+      session_code: sessionCode,
+      event: eventMessage,
+    });
+  };
+
   return (
     <div className="cardiac-controls">
       <div className="cardiac-header">Cardiac / Rhythm Controls</div>
 
       <div className="cardiac-body">
+        {/* Resuscitation Actions */}
+        <div className="cardiac-section" style={{ marginBottom: 12 }}>
+          <div className="cardiac-section-title">Resuscitation Actions</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button type="button" className="btn-classic btn-sm" onClick={() => handleQuickAction("Shock 200J", "Defibrillator Shock Delivered (200J Biphasic)")} style={{ backgroundColor: "#7f1d1d", color: "#fef2f2", border: "1px solid #991b1b" }}>⚡ Shock 200J</button>
+            <button type="button" className="btn-classic btn-sm" onClick={() => handleQuickAction("Start CPR", "Chest Compressions / CPR Initiated")} style={{ backgroundColor: "#854d0e", color: "#fefce8", border: "1px solid #a16207" }}>🫀 Start CPR</button>
+            <button type="button" className="btn-classic btn-sm" onClick={() => handleQuickAction("Pulse Check", "Pulse & Rhythm Check Performed")} style={{ backgroundColor: "#1e293b", color: "#f8fafc", border: "1px solid #334155" }}>🔍 Pulse Check</button>
+          </div>
+        </div>
+
         {/* Rhythm List */}
         <div className="cardiac-section">
           <div className="cardiac-section-title">Rhythm</div>

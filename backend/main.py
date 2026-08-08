@@ -577,6 +577,132 @@ async def api_scenario_generate(body: dict, user: dict = Depends(get_current_use
         
     return {"spec": spec, "expected_outcome": expected}
 
+def parse_scenario_spec_to_vitals(spec: dict) -> dict:
+    rhythm_type = spec.get("rhythm_type") or spec.get("rhythm") or "Sinus Rhythm"
+    vitals = map_rhythm_type_to_vitals(rhythm_type)
+    
+    raw_vitals = spec.get("initial_vitals") or spec.get("vitals") or spec.get("initial_readings") or {}
+    if not isinstance(raw_vitals, dict):
+        raw_vitals = {}
+
+    def get_val(keys):
+        for k in keys:
+            if k in raw_vitals and raw_vitals[k] is not None:
+                return raw_vitals[k]
+            if k in spec and spec[k] is not None:
+                return spec[k]
+        return None
+
+    # Rhythm
+    rhythm_val = get_val(["rhythm", "rhythm_type", "ecgRhythm"])
+    if rhythm_val:
+        vitals["rhythm"] = str(rhythm_val)
+
+    # Heart rate
+    hr_val = get_val(["heart_rate", "heartRate", "HR", "hr"])
+    if hr_val is not None:
+        try:
+            val = float(hr_val)
+            vitals["HR"] = val
+            vitals["pulse_rate"] = val
+        except (ValueError, TypeError):
+            pass
+
+    # SpO2
+    spo2_val = get_val(["spo2", "SpO2", "SPO2"])
+    if spo2_val is not None:
+        try:
+            vitals["SpO2"] = float(spo2_val)
+        except (ValueError, TypeError):
+            pass
+
+    # Blood Pressure
+    bp_sys = get_val(["sys_bp", "systolic_bp", "ABP_sys", "sysBP", "systolic"])
+    bp_dia = get_val(["dia_bp", "diastolic_bp", "ABP_dia", "diaBP", "diastolic"])
+    
+    bp_obj = get_val(["bloodPressure", "blood_pressure"])
+    if isinstance(bp_obj, dict):
+        bp_sys = bp_sys or bp_obj.get("systolic") or bp_obj.get("sys")
+        bp_dia = bp_dia or bp_obj.get("diastolic") or bp_obj.get("dia")
+        
+    if bp_sys is not None:
+        try:
+            v = float(bp_sys)
+            vitals["ABP_sys"] = v
+            vitals["NBP_sys"] = v
+        except (ValueError, TypeError):
+            pass
+
+    if bp_dia is not None:
+        try:
+            v = float(bp_dia)
+            vitals["ABP_dia"] = v
+            vitals["NBP_dia"] = v
+        except (ValueError, TypeError):
+            pass
+
+    if "ABP_sys" in vitals and "ABP_dia" in vitals and vitals["ABP_sys"] > 0:
+        map_val = round((vitals["ABP_sys"] + 2 * vitals["ABP_dia"]) / 3.0, 1)
+        vitals["MAP"] = map_val
+        vitals["NBP_mean"] = map_val
+
+    # Respiratory Rate
+    rr_val = get_val(["resp_rate", "respiratory_rate", "respiratoryRate", "avRR", "RR", "rr"])
+    if rr_val is not None:
+        try:
+            vitals["avRR"] = float(rr_val)
+        except (ValueError, TypeError):
+            pass
+
+    # EtCO2
+    etco2_val = get_val(["etco2", "etCO2", "ETCO2"])
+    if etco2_val is not None:
+        try:
+            vitals["etCO2"] = float(etco2_val)
+        except (ValueError, TypeError):
+            pass
+
+    # Temperature
+    temp_val = get_val(["temperature", "Tblood", "temp", "blood_temperature"])
+    if isinstance(temp_val, dict):
+        temp_val = temp_val.get("bloodTemperature") or temp_val.get("blood") or temp_val.get("value")
+    if temp_val is not None:
+        try:
+            v = float(temp_val)
+            vitals["Tblood"] = v
+            vitals["Tperi"] = round(v - 0.5, 1)
+        except (ValueError, TypeError):
+            pass
+
+    # Cardiac Output
+    co_val = get_val(["cardiac_output", "cardiacOutput", "CO"])
+    if co_val is not None:
+        try:
+            vitals["CO"] = float(co_val)
+        except (ValueError, TypeError):
+            pass
+
+    # PAP
+    pap_sys = get_val(["pap_sys", "PAP_sys"])
+    pap_dia = get_val(["pap_dia", "PAP_dia"])
+    pap_obj = get_val(["pulmonaryArteryPressure", "pap"])
+    if isinstance(pap_obj, dict):
+        pap_sys = pap_sys or pap_obj.get("systolic")
+        pap_dia = pap_dia or pap_obj.get("diastolic")
+
+    if pap_sys is not None:
+        try:
+            vitals["PAP_sys"] = float(pap_sys)
+        except (ValueError, TypeError):
+            pass
+    if pap_dia is not None:
+        try:
+            vitals["PAP_dia"] = float(pap_dia)
+        except (ValueError, TypeError):
+            pass
+
+    return vitals
+
 @api_app.post("/api/scenario/start")
 async def api_scenario_start(body: dict, user: dict = Depends(get_current_user)):
     spec = body.get("spec", {})
@@ -602,9 +728,8 @@ async def api_scenario_start(body: dict, user: dict = Depends(get_current_user))
                         (json.dumps(spec), session["id"])
                     )
                     
-                    # Map rhythm type to monitor state
-                    rhythm_type = spec.get("rhythm_type", "VF")
-                    vitals = map_rhythm_type_to_vitals(rhythm_type)
+                    # Parse vitals from spec
+                    vitals = parse_scenario_spec_to_vitals(spec)
                     
                     await cur.execute("SELECT state_data FROM monitor_state WHERE session_id = %s", (session["id"],))
                     state_row = await cur.fetchone()

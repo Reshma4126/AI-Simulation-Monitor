@@ -98,12 +98,8 @@ export default function InstructorParameterModal({
   const hrControlMax  = hrMax === 0 ? 1 : hrMax;
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-  /**
-   * In live mode: immediately emit to monitor store + ECG engine.
-   * In pending mode: only update local state (no emit).
-   */
   const liveEmitMonitorParam = (f, value) => {
-    if (pendingMode) return; // suppress in pending mode
+    if (pendingMode) return;
     updateParam(f, value);
     socket.emit("update_parameter", { field: f, value });
   };
@@ -220,13 +216,12 @@ export default function InstructorParameterModal({
     setApplying(true);
     setApplyStatus(null);
 
-    // Gather all staged values relevant to this dialog
     const staged = {};
-    if (field === "HR") {
-      staged.HR           = localHR;
-      staged.rhythm       = localRhythm;
-      staged.stElev       = stElev;
-      staged.stDepr       = stDepr;
+    if (field === "HR" || field === "ecg" || field === "cardiac") {
+      staged.HR            = localHR;
+      staged.rhythm        = localRhythm;
+      staged.stElev        = stElev;
+      staged.stDepr        = stDepr;
       staged.artifactLevel = artifactLevel;
       staged.artifactType  = artifactType;
       staged.transferTime  = localTransferTime;
@@ -249,15 +244,15 @@ export default function InstructorParameterModal({
       staged.NBP_dia = localNBPDia;
       staged.nibp_interval = localNIBPInterval;
     } else if (field === "toggles") {
-      staged.show_ecg = showEcg;
-      staged.show_hr = showHr;
-      staged.show_spo2 = showSpo2;
+      staged.show_ecg   = showEcg;
+      staged.show_hr    = showHr;
+      staged.show_spo2  = showSpo2;
       staged.show_pleth = showPleth;
-      staged.show_resp = showResp;
-      staged.show_rr = showRr;
-      staged.show_nibp = showNibp;
-      staged.show_map = showMap;
-      staged.show_temp = showTemp;
+      staged.show_resp  = showResp;
+      staged.show_rr    = showRr;
+      staged.show_nibp  = showNibp;
+      staged.show_map   = showMap;
+      staged.show_temp  = showTemp;
       staged.show_etco2 = showEtco2;
     }
 
@@ -266,6 +261,7 @@ export default function InstructorParameterModal({
         await onApply(staged);
       }
       setApplyStatus("success");
+      setApplying(false);
       setTimeout(() => {
         onClose();
       }, 1000);
@@ -448,14 +444,10 @@ export default function InstructorParameterModal({
           <span>Systolic</span>
           <input type="range" min={40} max={240} value={localSysBP} onChange={(e) => handleSysBPChange(Number(e.target.value))} />
         </label>
-        <input type="number" min={40} max={240} value={localSysBP} onChange={(e) => handleSysBPChange(Number(e.target.value))} style={{width:'60px'}}/>
-      </div>
-      <div className="control-row">
         <label>
           <span>Diastolic</span>
-          <input type="range" min={10} max={180} value={localDiaBP} onChange={(e) => handleDiaBPChange(Number(e.target.value))} />
+          <input type="range" min={20} max={160} value={localDiaBP} onChange={(e) => handleDiaBPChange(Number(e.target.value))} />
         </label>
-        <input type="number" min={10} max={180} value={localDiaBP} onChange={(e) => handleDiaBPChange(Number(e.target.value))} style={{width:'60px'}}/>
       </div>
     </div>
   );
@@ -466,209 +458,135 @@ export default function InstructorParameterModal({
       <div className="control-row">
         <label>
           <span>Systolic</span>
-          <input type="range" min={5} max={120} value={localPapSys} onChange={(e) => handlePapSysChange(Number(e.target.value))} />
+          <input type="range" min={10} max={80} value={localPapSys} onChange={(e) => handlePapSysChange(Number(e.target.value))} />
         </label>
-        <input type="number" min={5} max={120} value={localPapSys} onChange={(e) => handlePapSysChange(Number(e.target.value))} style={{width:'60px'}}/>
-      </div>
-      <div className="control-row">
         <label>
           <span>Diastolic</span>
-          <input type="range" min={0} max={80} value={localPapDia} onChange={(e) => handlePapDiaChange(Number(e.target.value))} />
+          <input type="range" min={0} max={40} value={localPapDia} onChange={(e) => handlePapDiaChange(Number(e.target.value))} />
         </label>
-        <input type="number" min={0} max={80} value={localPapDia} onChange={(e) => handlePapDiaChange(Number(e.target.value))} style={{width:'60px'}}/>
       </div>
     </div>
   );
 
   const renderEtCO2Controls = () => (
     <div className="control-card">
-      <h3>Capnography &amp; Respiration</h3>
+      <h3>etCO2 & Respirations</h3>
       <div className="control-row">
         <label>
-          <span>EtCO2</span>
+          <span>etCO2 (mmHg)</span>
           <input type="range" min={0} max={100} value={localEtco2} onChange={(e) => handleEtco2Change(Number(e.target.value))} />
         </label>
-        <input type="number" min={0} max={100} value={localEtco2} onChange={(e) => handleEtco2Change(Number(e.target.value))} style={{width:'60px'}}/>
-      </div>
-      <div className="control-row">
         <label>
-          <span>Resp Rate</span>
+          <span>awRR (/min)</span>
           <input type="range" min={0} max={80} value={localRR} onChange={(e) => handleRespRateChange(Number(e.target.value))} />
         </label>
-        <input type="number" min={0} max={80} value={localRR} onChange={(e) => handleRespRateChange(Number(e.target.value))} style={{width:'60px'}}/>
       </div>
     </div>
   );
 
-  const renderTemperatureControls = () => (
+  const renderTempControls = () => (
     <div className="control-card">
-      <h3>Temperature</h3>
+      <h3>Blood Temperature (°C)</h3>
+      <div className="control-row">
+        <input type="range" min={30} max={45} step={0.1} value={localTblood} onChange={(e) => handleTbloodChange(Number(e.target.value))} />
+        <input type="number" min={30} max={45} step={0.1} value={localTblood} onChange={(e) => handleTbloodChange(Number(e.target.value))} />
+      </div>
+    </div>
+  );
+
+  const renderNBPControls = () => (
+    <div className="control-card">
+      <h3>NIBP Controls</h3>
       <div className="control-row">
         <label>
-          <span>Blood Temp (°C)</span>
-          <input type="range" min={30} max={45} step={0.1} value={localTblood} onChange={(e) => handleTbloodChange(Number(e.target.value))} />
+          <span>Systolic</span>
+          <input type="number" min={40} max={240} value={localNBPSys} onChange={(e) => setLocalNBPSys(Number(e.target.value))} />
         </label>
-        <input type="number" min={30} max={45} step={0.1} value={localTblood} onChange={(e) => handleTbloodChange(Number(e.target.value))} style={{width:'70px'}}/>
-      </div>
-    </div>
-  );
-
-  const renderNIBPControls = () => (
-    <div className="control-card">
-      <h3>NIBP Cuff Settings</h3>
-      <div className="control-row" style={{ marginBottom: "12px" }}>
         <label>
-          <span>Target Systolic</span>
-          <input type="range" min={40} max={240} value={localNBPSys} onChange={(e) => setLocalNBPSys(Number(e.target.value))} />
+          <span>Diastolic</span>
+          <input type="number" min={20} max={160} value={localNBPDia} onChange={(e) => setLocalNBPDia(Number(e.target.value))} />
         </label>
-        <input type="number" min={40} max={240} value={localNBPSys} onChange={(e) => setLocalNBPSys(Number(e.target.value))} style={{width:'60px'}}/>
-      </div>
-      <div className="control-row" style={{ marginBottom: "12px" }}>
-        <label>
-          <span>Target Diastolic</span>
-          <input type="range" min={10} max={180} value={localNBPDia} onChange={(e) => setLocalNBPDia(Number(e.target.value))} />
-        </label>
-        <input type="number" min={10} max={180} value={localNBPDia} onChange={(e) => setLocalNBPDia(Number(e.target.value))} style={{width:'60px'}}/>
       </div>
       <div className="control-row">
         <label>
           <span>Auto Interval</span>
-          <select value={localNIBPInterval} onChange={(e) => setLocalNIBPInterval(Number(e.target.value))} style={{ padding: "4px 8px", background: "#222", color: "#fff", border: "1px solid #444", borderRadius: "4px" }}>
-            <option value={0}>Manual / Off</option>
-            <option value={1}>Every 1 Minute</option>
-            <option value={2}>Every 2 Minutes</option>
-            <option value={5}>Every 5 Minutes</option>
-            <option value={10}>Every 10 Minutes</option>
-            <option value={15}>Every 15 Minutes</option>
+          <select value={localNIBPInterval} onChange={(e) => setLocalNIBPInterval(Number(e.target.value))}>
+            <option value={0}>STAT / Manual</option>
+            <option value={1}>1 Min</option>
+            <option value={5}>5 Mins</option>
+            <option value={15}>15 Mins</option>
+            <option value={30}>30 Mins</option>
           </select>
         </label>
       </div>
     </div>
   );
 
-  const renderToggleControls = () => (
-    <div className="control-card visibility-toggles-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", padding: "10px" }}>
-      <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#fff" }}>
-        <input type="checkbox" checked={showEcg} onChange={(e) => setShowEcg(e.target.checked)} />
-        ECG
-      </label>
-      <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#fff" }}>
-        <input type="checkbox" checked={showHr} onChange={(e) => setShowHr(e.target.checked)} />
-        Heart Rate
-      </label>
-      <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#fff" }}>
-        <input type="checkbox" checked={showSpo2} onChange={(e) => setShowSpo2(e.target.checked)} />
-        SpO2
-      </label>
-      <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#fff" }}>
-        <input type="checkbox" checked={showPleth} onChange={(e) => setShowPleth(e.target.checked)} />
-        Pleth Waveform
-      </label>
-      <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#fff" }}>
-        <input type="checkbox" checked={showResp} onChange={(e) => setShowResp(e.target.checked)} />
-        Respiratory Waveform
-      </label>
-      <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#fff" }}>
-        <input type="checkbox" checked={showRr} onChange={(e) => setShowRr(e.target.checked)} />
-        Respiratory Rate
-      </label>
-      <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#fff" }}>
-        <input type="checkbox" checked={showNibp} onChange={(e) => setShowNibp(e.target.checked)} />
-        NIBP
-      </label>
-      <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#fff" }}>
-        <input type="checkbox" checked={showMap} onChange={(e) => setShowMap(e.target.checked)} />
-        MAP
-      </label>
-      <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#fff" }}>
-        <input type="checkbox" checked={showTemp} onChange={(e) => setShowTemp(e.target.checked)} />
-        Temperature
-      </label>
-      <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#fff" }}>
-        <input type="checkbox" checked={showEtco2} onChange={(e) => setShowEtco2(e.target.checked)} />
-        EtCO2
-      </label>
+  const renderTogglesControls = () => (
+    <div className="control-card">
+      <h3>Display Toggles</h3>
+      <div className="toggles-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+        <label><input type="checkbox" checked={showEcg} onChange={(e) => setShowEcg(e.target.checked)} /> Show ECG Wave</label>
+        <label><input type="checkbox" checked={showHr} onChange={(e) => setShowHr(e.target.checked)} /> Show HR Value</label>
+        <label><input type="checkbox" checked={showPleth} onChange={(e) => setShowPleth(e.target.checked)} /> Show Pleth Wave</label>
+        <label><input type="checkbox" checked={showSpo2} onChange={(e) => setShowSpo2(e.target.checked)} /> Show SpO2 Value</label>
+        <label><input type="checkbox" checked={showResp} onChange={(e) => setShowResp(e.target.checked)} /> Show Capno Wave</label>
+        <label><input type="checkbox" checked={showRr} onChange={(e) => setShowRr(e.target.checked)} /> Show RR Value</label>
+        <label><input type="checkbox" checked={showNibp} onChange={(e) => setShowNibp(e.target.checked)} /> Show NIBP Value</label>
+        <label><input type="checkbox" checked={showMap} onChange={(e) => setShowMap(e.target.checked)} /> Show MAP Value</label>
+        <label><input type="checkbox" checked={showTemp} onChange={(e) => setShowTemp(e.target.checked)} /> Show Temp Value</label>
+        <label><input type="checkbox" checked={showEtco2} onChange={(e) => setShowEtco2(e.target.checked)} /> Show etCO2 Value</label>
+      </div>
     </div>
   );
 
   const getTitle = () => {
-    if (field === "HR") return "ECG & Heart Rate Controls";
-    if (field === "SpO2") return "Pulse Oximetry Controls";
-    if (field === "ABP_sys" || field === "ABP_dia" || field === "abp") return "Arterial Blood Pressure Controls";
-    if (field === "PAP_sys" || field === "PAP_dia" || field === "pap") return "Pulmonary Artery Pressure Controls";
-    if (field === "etCO2" || field === "avRR") return "Capnography Controls";
-    if (field === "Tperi" || field === "Tblood") return "Temperature Controls";
-    if (field === "NBP_sys" || field === "NBP_dia" || field === "nbp") return "Non-Invasive Blood Pressure (NIBP) Controls";
-    if (field === "toggles") return "Monitor Component Visibility Toggles";
-    return `${field} Controls`;
-  };
-
-  const renderContent = () => {
-    if (field === "HR") return renderCardiacControls();
-    if (field === "SpO2") return renderSpO2Controls();
-    if (field === "ABP_sys" || field === "ABP_dia" || field === "abp") return renderABPControls();
-    if (field === "PAP_sys" || field === "PAP_dia" || field === "pap") return renderPAPControls();
-    if (field === "etCO2" || field === "avRR") return renderEtCO2Controls();
-    if (field === "Tperi" || field === "Tblood") return renderTemperatureControls();
-    if (field === "NBP_sys" || field === "NBP_dia" || field === "nbp") return renderNIBPControls();
-    if (field === "toggles") return renderToggleControls();
-    return <div style={{padding: "20px"}}>No specialized controls available for {field}.</div>;
+    if (field === "HR" || field === "ecg" || field === "cardiac") return "ECG & Heart Rate Controls";
+    if (field === "SpO2") return "SpO2 Controls";
+    if (field === "abp" || field === "ABP_sys" || field === "ABP_dia") return "ABP Controls";
+    if (field === "pap" || field === "PAP_sys" || field === "PAP_dia") return "PAP Controls";
+    if (field === "etCO2" || field === "avRR") return "Respiratory & Capnography Controls";
+    if (field === "Tblood" || field === "Tperi") return "Temperature Controls";
+    if (field === "NBP_sys" || field === "NBP_dia" || field === "nbp") return "NIBP Controls";
+    if (field === "toggles") return "Display Toggles";
+    return "Parameter Controls";
   };
 
   return (
-    <div className="dialog-overlay" onClick={onClose} style={{ zIndex: 11000, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div
-        className="dialog-box"
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width: field === "HR" ? "760px" : "420px",
-          maxHeight: "95vh",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-          borderRadius: "6px",
-          background: "var(--surface-container, #111)",
-          border: "2px solid var(--outline-variant, #333)",
-          boxShadow: "0 8px 40px rgba(0,0,0,0.8)"
-        }}
-      >
-        <div className="dialog-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 12px", background: "var(--dialog-title-bg, #222)" }}>
-          <h2 style={{ fontSize: "13px", margin: 0, fontWeight: "700", color: "#fff" }}>{getTitle()}</h2>
-          <button className="close-btn" onClick={onClose} style={{ background: "none", border: "none", color: "#fff", fontSize: "18px", cursor: "pointer", padding: "0 4px" }}>×</button>
+    <div className="dialog-overlay" style={{ zIndex: 10000 }}>
+      <div className="dialog-box" style={{ maxWidth: field === "HR" || field === "ecg" || field === "cardiac" ? 640 : 440, width: "100%" }}>
+        <div className="dialog-header">
+          <h2>{getTitle()}</h2>
+          <button className="btn-classic btn-sm" onClick={onClose}>✕</button>
         </div>
-        <div
-          className="dialog-body param-card-body"
-          style={{
-            background: "transparent",
-            boxShadow: "none",
-            position: "static",
-            border: "none",
-            marginTop: 0,
-            padding: "8px 12px",
-            overflowY: "auto",
-            flex: 1
-          }}
-        >
-          {renderContent()}
-        </div>
-        {/* Footer — Cancel + Apply always present */}
-        <div className="dialog-footer" style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "stretch", padding: "8px 12px", background: "var(--surface-container-high, #1a1a1a)", borderTop: "1px solid var(--outline-variant, #333)" }}>
+
+        <div className="dialog-body" style={{ padding: "12px 16px" }}>
+          {(field === "HR" || field === "ecg" || field === "cardiac") && renderCardiacControls()}
+          {field === "SpO2" && renderSpO2Controls()}
+          {(field === "abp" || field === "ABP_sys" || field === "ABP_dia") && renderABPControls()}
+          {(field === "pap" || field === "PAP_sys" || field === "PAP_dia") && renderPAPControls()}
+          {(field === "etCO2" || field === "avRR") && renderEtCO2Controls()}
+          {(field === "Tblood" || field === "Tperi") && renderTempControls()}
+          {(field === "NBP_sys" || field === "NBP_dia" || field === "nbp") && renderNBPControls()}
+          {field === "toggles" && renderTogglesControls()}
+
           {applyStatus === "success" && (
-            <div style={{ color: "var(--alarm-green, #00FF44)", textAlign: "center", fontSize: "12px", fontWeight: "bold" }}>
-              Changes Applied Successfully
+            <div style={{ color: "#3fb950", fontSize: "12px", marginTop: "8px", textAlign: "center" }}>
+              ✓ Settings applied successfully
             </div>
           )}
           {applyStatus === "error" && (
-            <div style={{ color: "var(--alarm-red, #FF3333)", textAlign: "center", fontSize: "12px", fontWeight: "bold" }}>
-              Unable to update student monitor. Retry?
+            <div style={{ color: "#ff7b72", fontSize: "12px", marginTop: "8px", textAlign: "center" }}>
+              ✕ Failed to apply settings
             </div>
           )}
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
-            <button className="btn-classic btn-cancel" onClick={onClose} disabled={applying} style={{ padding: "4px 12px", fontSize: "12px" }}>Cancel</button>
-            <button className="btn-classic btn-apply" onClick={handleApply} disabled={applying} style={{ minWidth: "120px", padding: "4px 12px", fontSize: "12px" }}>
-              {applying ? "Applying..." : "Apply Changes"}
-            </button>
-          </div>
+        </div>
+
+        <div className="dialog-footer" style={{ display: "flex", justifyContent: "flex-end", gap: "8px", padding: "8px 16px" }}>
+          <button className="btn-classic btn-cancel" onClick={onClose} disabled={applying}>Cancel</button>
+          <button className="btn-classic btn-apply" onClick={handleApply} disabled={applying}>
+            {applying ? "Applying..." : "Apply Changes"}
+          </button>
         </div>
       </div>
     </div>

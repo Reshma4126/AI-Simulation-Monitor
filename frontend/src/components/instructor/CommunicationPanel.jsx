@@ -3,16 +3,6 @@ import socket from "../../socket";
 
 const API = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
 
-const QUICK_ACTIONS = [
-  { label: "⚡ Shock 200J", event: "Defibrillator Shock Delivered (200J Biphasic)" },
-  { label: "🫀 Start CPR", event: "Chest Compressions / CPR Initiated" },
-  { label: "💉 Epinephrine 1mg", event: "Administered Epinephrine 1mg IV Push" },
-  { label: "💉 Atropine 1mg", event: "Administered Atropine 1mg IV Push" },
-  { label: "💉 Amiodarone 300mg", event: "Administered Amiodarone 300mg IV Bolus" },
-  { label: "🫁 Airway / Vent", event: "Airway Secured / Bag-Valve Mask Ventilation" },
-  { label: "🔍 Pulse Check", event: "Pulse & Rhythm Check Performed" },
-];
-
 export default function CommunicationPanel({ sessionCode }) {
   const [activeTab, setActiveTab] = useState("events");
   const [events, setEvents] = useState([]);
@@ -39,7 +29,6 @@ export default function CommunicationPanel({ sessionCode }) {
   useEffect(() => {
     const handleEvent = (entry) => {
       setEvents((prev) => {
-        // Prevent duplicate entries
         if (prev.some((e) => e.timestamp === entry.timestamp && e.event === entry.event)) {
           return prev;
         }
@@ -83,53 +72,21 @@ export default function CommunicationPanel({ sessionCode }) {
     setChatInput("");
   };
 
-  const handleQuickAction = (actionText) => {
-    socket.emit("add_event_log", {
-      session_code: sessionCode,
-      event: actionText,
-    });
-  };
-
   return (
     <div className="communication-footer">
-      <div className="comm-footer-tabs" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ display: "flex", gap: "4px" }}>
-          <button 
-            className={`comm-tab ${activeTab === "events" ? "active" : ""}`}
-            onClick={() => setActiveTab("events")}
-          >
-            Event Log ({events.length})
-          </button>
-          <button 
-            className={`comm-tab ${activeTab === "chat" ? "active" : ""}`}
-            onClick={() => setActiveTab("chat")}
-          >
-            Instructor Chat
-          </button>
-        </div>
-
-        {/* Quick Clinical Action Chips */}
-        <div className="quick-actions-bar" style={{ display: "flex", gap: "6px", overflowX: "auto", padding: "2px 8px" }}>
-          {QUICK_ACTIONS.map((action, idx) => (
-            <button
-              key={idx}
-              className="btn-classic btn-sm"
-              onClick={() => handleQuickAction(action.event)}
-              style={{
-                fontSize: "11px",
-                padding: "2px 8px",
-                backgroundColor: "#1e293b",
-                color: "#00FF44",
-                border: "1px solid #334155",
-                borderRadius: "4px",
-                cursor: "pointer",
-                whiteSpace: "nowrap"
-              }}
-            >
-              {action.label}
-            </button>
-          ))}
-        </div>
+      <div className="comm-footer-tabs">
+        <button 
+          className={`comm-tab ${activeTab === "events" ? "active" : ""}`}
+          onClick={() => setActiveTab("events")}
+        >
+          Event Log ({events.length})
+        </button>
+        <button 
+          className={`comm-tab ${activeTab === "chat" ? "active" : ""}`}
+          onClick={() => setActiveTab("chat")}
+        >
+          Instructor Chat
+        </button>
       </div>
 
       <div className="comm-footer-content">
@@ -166,4 +123,3 @@ export default function CommunicationPanel({ sessionCode }) {
     </div>
   );
 }
-
