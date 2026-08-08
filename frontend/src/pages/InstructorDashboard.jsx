@@ -13,6 +13,7 @@ import AlarmBar from "../components/monitor/AlarmBar";
 import CommunicationPanel from "../components/instructor/CommunicationPanel";
 import TrendsModal from "../components/instructor/TrendsModal";
 import ScenarioDrawer from "../components/instructor/ScenarioDrawer";
+import CardiacControls from "../components/instructor/CardiacControls";
 
 import InstructorParameterModal from "../components/dialogs/InstructorParameterModal";
 
@@ -23,6 +24,7 @@ export default function InstructorDashboard() {
   const [paramSpec, setParamSpec] = useState(null);
   const [openDialog, setOpenDialog] = useState(null);
   const [toasts, setToasts] = useState([]);
+  const [showCardiacModal, setShowCardiacModal] = useState(false);
   
   const setFullState = useMonitorStore((s) => s.setFullState);
   const appendEvent = useMonitorStore((s) => s.appendEvent);
@@ -281,6 +283,7 @@ export default function InstructorDashboard() {
           <span className="topbar-role">INSTRUCTOR</span>
         </div>
         <div className="topbar-center">
+          <button className="btn-classic btn-sm" onClick={() => setShowCardiacModal(true)}>❤️ Cardiac / Rhythm</button>
           <button className="btn-classic btn-sm" onClick={() => setShowTrendsModal(true)}>📈 Trends</button>
           <button className="btn-classic btn-sm" onClick={() => setShowScenarioDrawer(true)}>📋 Case Details</button>
           <button className="btn-classic btn-sm" onClick={openScenarioList}>📄 Change Scenario</button>
@@ -326,6 +329,14 @@ export default function InstructorDashboard() {
       </div>
 
       {/* Overlays / Modals */}
+
+      {showCardiacModal && (
+        <div className="dialog-overlay" style={{ zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div className="dialog-box" style={{ maxWidth: 640, width: "100%", background: "#111", border: "2px solid #333", borderRadius: 8, padding: 16, color: "#fff" }}>
+            <CardiacControls sessionCode={sessionCode} onClose={() => setShowCardiacModal(false)} />
+          </div>
+        </div>
+      )}
       
       {showTrendsModal && (
         <TrendsModal onClose={() => setShowTrendsModal(false)} sessionStartRef={sessionStartRef} />
