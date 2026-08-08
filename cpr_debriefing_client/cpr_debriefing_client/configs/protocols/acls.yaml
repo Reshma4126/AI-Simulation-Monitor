@@ -1,0 +1,29 @@
+extends: base
+protocol_id: acls
+display_name: "AHA 2020 Adult Cardiac Arrest"
+patient_type: adult
+guideline_version: "AHA 2020"
+
+timing_windows:
+  cpr_initiation_ms: 10000
+  pre_shock_pause_max_ms: 10000
+  post_shock_cpr_delay_max_ms: 10000
+  rhythm_check_interval_ms: 120000
+  epinephrine_interval_ms: 300000
+  epinephrine_max_interval_ms: 360000
+  amiodarone_after_shock_n: 3       # give after 3rd shock
+
+shockable_rhythms: [VF, pVT]
+non_shockable_rhythms: [PEA, asystole]
+
+drug_rules:
+  epinephrine:
+    dose_mg: 1.0
+    route: IV
+    repeat_interval_ms: 300000
+    applicable_rhythms: [VF, pVT, PEA, asystole]
+  amiodarone:
+    first_dose_mg: 300.0
+    second_dose_mg: 150.0
+    applicable_rhythms: [VF, pVT]       # NOT PEA or asystole
+    contraindicated_rhythms: [PEA, asystole]

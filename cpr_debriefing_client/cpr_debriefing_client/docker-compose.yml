@@ -1,0 +1,51 @@
+services:
+
+  # ── Ollama LLM server ────────────────────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: cpr_ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama   # model weights cached across restarts
+    restart: unless-stopped
+
+  # ── Flask application ────────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cpr_app
+    ports:
+      - "5000:5000"
+    environment:
+      # LLM
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_BASE_URL: http://ollama:11434/v1
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:0.5b}
+      # Optional API keys (only needed for Claude/audio pipelines)
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      HF_TOKEN: ${HF_TOKEN:-}
+      HUGGINGFACE_TOKEN: ${HF_TOKEN:-}
+      # App config
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      OUTPUT_DIR: output/reports
+      DATA_DIR: data/sessions
+      SECRET_KEY: ${SECRET_KEY:-}
+    volumes:
+      - cpr_uploads:/app/uploads
+      - cpr_reports:/app/output/reports
+      - cpr_tts:/app/output/tts
+      - cpr_data:/app/data/sessions
+      - cpr_logs:/app/logs
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+volumes:
+  ollama_models:    # LLM weights — persisted so model isn't re-downloaded each time
+  cpr_uploads:
+  cpr_reports:
+  cpr_tts:
+  cpr_data:
+  cpr_logs:

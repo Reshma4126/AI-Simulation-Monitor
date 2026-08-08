@@ -433,6 +433,260 @@ async def get_report_pdf(
     )
 
 
+# ── Scenario Studio Integration & API Endpoints ────────────────────
+
+import sys
+import os
+import uuid
+from pathlib import Path
+
+# Add debriefing to sys.path if not present
+DEBRIEFING_PATH = Path(__file__).resolve().parent / "debriefing"
+if str(DEBRIEFING_PATH) not in sys.path:
+    sys.path.insert(0, str(DEBRIEFING_PATH))
+
+try:
+    from scenarios.generator import ScenarioGenerator
+    from scenarios.outcome_predictor import OutcomePredictor
+    from scenarios.voice_narrator import VoiceNarrator
+    from scenarios.instructor_listener import InstructorListener
+    
+    _scenario_gen = ScenarioGenerator()
+    _outcome_pred = OutcomePredictor()
+    _narrator = VoiceNarrator(output_dir=DEBRIEFING_PATH / "output" / "tts")
+    _instructor = InstructorListener()
+except Exception as e:
+    print(f"[main.py] Warning: Scenario modules failed to load: {e}")
+    _scenario_gen = _outcome_pred = _narrator = _instructor = None
+
+_active_scenario_runs = {}
+
+def map_rhythm_type_to_vitals(rhythm_type: str) -> dict:
+    rt = (rhythm_type or "").upper()
+    if "VF" in rt or "FIBRILLATION" in rt:
+        return {
+            "rhythm": "Ventricular Fibrillation",
+            "HR": 0.0,
+            "pulse_rate": 0.0,
+            "SpO2": 0.0,
+            "ABP_sys": 0.0,
+            "ABP_dia": 0.0,
+            "MAP": 0.0,
+            "avRR": 0.0,
+            "etCO2": 0.0,
+            "emd_pea": False,
+        }
+    elif "PEA" in rt:
+        return {
+            "rhythm": "Sinus Rhythm",
+            "HR": 60.0,
+            "pulse_rate": 0.0,
+            "SpO2": 0.0,
+            "ABP_sys": 0.0,
+            "ABP_dia": 0.0,
+            "MAP": 0.0,
+            "avRR": 0.0,
+            "etCO2": 0.0,
+            "emd_pea": True,
+        }
+    elif "ASYSTOLE" in rt:
+        return {
+            "rhythm": "Asystole",
+            "HR": 0.0,
+            "pulse_rate": 0.0,
+            "SpO2": 0.0,
+            "ABP_sys": 0.0,
+            "ABP_dia": 0.0,
+            "MAP": 0.0,
+            "avRR": 0.0,
+            "etCO2": 0.0,
+            "emd_pea": False,
+        }
+    elif "BRADY" in rt:
+        return {
+            "rhythm": "Sinus Bradycardia",
+            "HR": 40.0,
+            "pulse_rate": 40.0,
+            "SpO2": 92.0,
+            "ABP_sys": 90.0,
+            "ABP_dia": 60.0,
+            "MAP": 70.0,
+            "avRR": 10.0,
+            "etCO2": 35.0,
+            "emd_pea": False,
+        }
+    elif "TACHY" in rt or "SVT" in rt:
+        return {
+            "rhythm": "SVT",
+            "HR": 150.0,
+            "pulse_rate": 150.0,
+            "SpO2": 95.0,
+            "ABP_sys": 100.0,
+            "ABP_dia": 70.0,
+            "MAP": 80.0,
+            "avRR": 20.0,
+            "etCO2": 38.0,
+            "emd_pea": False,
+        }
+    else:
+        return {
+            "rhythm": "Sinus Rhythm",
+            "HR": 75.0,
+            "pulse_rate": 75.0,
+            "SpO2": 98.0,
+            "ABP_sys": 120.0,
+            "ABP_dia": 80.0,
+            "MAP": 93.0,
+            "avRR": 14.0,
+            "etCO2": 35.0,
+            "emd_pea": False,
+        }
+
+@api_app.get("/api/scenario/list")
+async def api_scenario_list(user: dict = Depends(get_current_user)):
+    if not _scenario_gen:
+        raise HTTPException(status_code=503, detail="Scenario generator not available")
+    return {
+        "levels": _scenario_gen.list_levels(),
+        "locations": _scenario_gen.list_locations(),
+        "specialities": _scenario_gen.list_specialities(),
+        "disciplines": {
+            "doctor": "Physician / Registrar",
+            "nurse": "Staff Nurse / Charge Nurse",
+            "physiotherapist": "Physiotherapist",
+            "allied": "Allied Health Professional",
+        },
+    }
+
+@api_app.post("/api/scenario/generate")
+async def api_scenario_generate(body: dict, user: dict = Depends(get_current_user)):
+    if not _scenario_gen:
+        raise HTTPException(status_code=503, detail="Scenario generator not available")
+    level = body.get("level", "beginner")
+    location = body.get("location", "ER")
+    discipline = body.get("discipline", ["doctor"])
+    speciality = body.get("speciality", "ER")
+    
+    spec = _scenario_gen.generate(
+        level=level, location=location,
+        discipline=discipline, speciality=speciality,
+    )
+    expected = None
+    if _outcome_pred:
+        expected = _outcome_pred.build_expected(spec)
+        
+    return {"spec": spec, "expected_outcome": expected}
+
+@api_app.post("/api/scenario/start")
+async def api_scenario_start(body: dict, user: dict = Depends(get_current_user)):
+    spec = body.get("spec", {})
+    session_code = body.get("session_code")
+    
+    run_id = str(uuid.uuid4())
+    _active_scenario_runs[run_id] = {
+        "spec": spec,
+        "started_at": datetime.utcnow().isoformat(),
+        "status": "active"
+    }
+    
+    if session_code:
+        pool = await get_db_pool()
+        async with pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute("SELECT id FROM sessions WHERE session_code = %s", (session_code,))
+                session = await cur.fetchone()
+                if session:
+                    # Update sessions table with the scenario spec JSON
+                    await cur.execute(
+                        "UPDATE sessions SET current_scenario_json = %s, current_scenario_id = NULL WHERE id = %s",
+                        (json.dumps(spec), session["id"])
+                    )
+                    
+                    # Map rhythm type to monitor state
+                    rhythm_type = spec.get("rhythm_type", "VF")
+                    vitals = map_rhythm_type_to_vitals(rhythm_type)
+                    
+                    await cur.execute("SELECT state_data FROM monitor_state WHERE session_id = %s", (session["id"],))
+                    state_row = await cur.fetchone()
+                    if state_row:
+                        state = json.loads(state_row["state_data"])
+                        for k, v in vitals.items():
+                            state[k] = v
+                        state["initial_readings_hidden"] = True
+                        state["last_updated"] = datetime.utcnow().isoformat()
+                        state["updated_by"] = user.get("username", "")
+                        
+                        from socket_manager import sio, compute_alarms
+                        state["alarms"] = compute_alarms(state)
+                        
+                        await cur.execute("UPDATE monitor_state SET state_data = %s WHERE session_id = %s", (json.dumps(state), session["id"]))
+                        
+                        # Emit updates to SIO room
+                        await sio.emit("state_update", state, room=session_code)
+                        await sio.emit("rhythm_change", {
+                            k: state.get(k) for k in
+                            ["rhythm", "extrasystole", "HR", "ecg_lead",
+                             "artifact_electrical", "artifact_muscular", "emd_pea"]
+                        }, room=session_code)
+                        
+                        # Broadcast scenario_selected
+                        await sio.emit("scenario_selected", spec, room=session_code)
+                        
+    return {"run_id": run_id, "status": "active"}
+
+@api_app.post("/api/scenario/speak")
+async def api_scenario_speak(body: dict, user: dict = Depends(get_current_user)):
+    if not _narrator:
+         raise HTTPException(status_code=503, detail="Voice narrator not available")
+    text = body.get("text", "")
+    speak_type = body.get("type", "custom")
+    spec = body.get("spec")
+    
+    # We default to browser TTS to bypass server-side setup dependencies
+    if speak_type == "intro" and spec:
+        text = spec.get("narration_intro", "")
+    
+    return {"mode": "browser", "text": text}
+
+@api_app.post("/api/scenario/narrate")
+async def api_scenario_narrate(body: dict, user: dict = Depends(get_current_user)):
+    spec = body.get("spec", {})
+    text = spec.get("narration_intro", "")
+    if not text:
+        pt = spec.get("patient", {})
+        text = (
+            f"Attention team. {spec.get('level','').title()}-level scenario "
+            f"in the {spec.get('location_label', 'hospital')}. "
+            f"Patient: {pt.get('age','?')}-year-old {pt.get('sex','patient')}. "
+            f"Presentation: {pt.get('presentation','cardiac arrest')}. You may begin."
+        )
+    return {"mode": "browser", "text": text}
+
+@api_app.post("/api/scenario/instructor")
+async def api_scenario_instructor(body: dict, user: dict = Depends(get_current_user)):
+    if not _instructor:
+         raise HTTPException(status_code=503, detail="Instructor listener not available")
+    text = body.get("text", "")
+    if not text:
+        raise HTTPException(status_code=400, detail="No text provided")
+        
+    params = _instructor.parse_text(text)
+    params.setdefault("level", "beginner")
+    params.setdefault("location", "ER")
+    params.setdefault("speciality", "ER")
+    params.setdefault("discipline", ["doctor"])
+    
+    spec = {}
+    if _scenario_gen:
+        spec = _scenario_gen.generate(
+            level=params["level"],
+            location=params["location"],
+            discipline=params["discipline"],
+            speciality=params["speciality"],
+        )
+    return {"parsed_params": params, "spec": spec}
+
+
 # ── WebSocket (SimMan ECG Engine) ─────────────────────────────────
 
 def _state_snapshot() -> str:

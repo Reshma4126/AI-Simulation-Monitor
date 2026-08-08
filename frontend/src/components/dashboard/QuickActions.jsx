@@ -133,43 +133,6 @@ export default function QuickActions({ handleStartSimulation, onOpenModal }) {
           </div>
         </div>
 
-        {/* Card 4: Scenario Library */}
-        <div
-          onClick={() => onOpenModal("library")}
-          className="medsim-quick-card"
-        >
-          <div
-            style={{
-              width: "40px",
-              height: "40px",
-              borderRadius: "12px",
-              backgroundColor: "#F1F5F9",
-              color: "#334155",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              marginBottom: "12px",
-            }}
-          >
-            <BookOpen size={20} color="#334155" />
-          </div>
-
-          <div>
-            <div
-              style={{
-                fontSize: "16px",
-                fontWeight: "700",
-                color: "#0F172A",
-                marginBottom: "4px",
-              }}
-            >
-              Scenario Library
-            </div>
-            <div style={{ fontSize: "12px", color: "#64748B", fontWeight: "500" }}>
-              Browse 20 clinical scenarios
-            </div>
-          </div>
-        </div>
       </div>
     </section>
   );

@@ -1,0 +1,183 @@
+{
+  "meta": {
+    "title": "AI-Generated Debriefing and Performance Analysis Report",
+    "subtitle": "Simulation-Based ACLS Scenario",
+    "date": "28 May 2026",
+    "organization": "Medical Simulation Centre — Confidential",
+    "info": {
+      "Scenario ID":      "ACLS_SIM_004",
+      "Scenario Type":    "Adult Cardiac Arrest – Ventricular Fibrillation",
+      "Date & Time":      "28 May 2026",
+      "Duration":         "13 Minutes",
+      "Simulation Mode":  "High-Fidelity Simulation",
+      "Final Outcome":    "ROSC Achieved",
+      "Team Size":        "6 Members"
+    }
+  },
+  "sections": [
+    {
+      "title": "Team Role Allocation",
+      "type": "table",
+      "col_widths": [0.5, 0.5],
+      "rows": [
+        ["Team Role",                    "Participant ID"],
+        ["Team Leader",                  "TL-01"],
+        ["Compressor",                   "CPR-01"],
+        ["Airway",                       "AW-01"],
+        ["Defibrillator / CPR Coach",    "DC-01"],
+        ["IV / Medication Member",       "IV-01"],
+        ["Recorder",                     "RC-01"]
+      ]
+    },
+    {
+      "title": "AI-Generated Event Timeline",
+      "type": "table",
+      "col_widths": [0.2, 0.8],
+      "rows": [
+        ["Time",   "Event Detected"],
+        ["00:10",  "CPR Initiated"],
+        ["00:48",  "Pulseless VT Recognized"],
+        ["01:22",  "Shock 1 Delivered"],
+        ["02:18",  "Epinephrine 1 mg Administered"],
+        ["03:25",  "Shock 2 Delivered"],
+        ["04:25",  "Amiodarone 300 mg Administered"],
+        ["05:30",  "Shock 3 Delivered"],
+        ["06:12",  "Epinephrine Repeated"],
+        ["07:25",  "Shock 4 Delivered"],
+        ["08:05",  "Reversible Causes Discussed"],
+        ["09:24",  "Shock 5 Delivered"],
+        ["10:20",  "Advanced Airway Secured"],
+        ["11:08",  "Rhythm Transition to PEA"],
+        ["12:48",  "Pulse Detected"],
+        ["12:55",  "ROSC Achieved"]
+      ]
+    },
+    {
+      "title": "AI-Based Performance Metrics",
+      "type": "table",
+      "col_widths": [0.55, 0.45],
+      "rows": [
+        ["Parameter",                       "Observation"],
+        ["Time to CPR",                     "10 seconds"],
+        ["Time to First Shock",             "72 seconds"],
+        ["Compression Fraction",            "87%"],
+        ["Average Compression Interruption","6 seconds"],
+        ["Longest Compression Pause",       "11 seconds"],
+        ["Defibrillation Safety Compliance","Appropriate"],
+        ["Post-Shock CPR Restart",          "Immediate"],
+        ["Pulse Check Duration",            "Within recommended limits"],
+        ["Closed Loop Communication",       "Present intermittently"],
+        ["Team Leadership Clarity",         "Good"],
+        ["Reversible Causes Discussion",    "Adequate"],
+        ["Advanced Airway Timing",          "Appropriate"]
+      ]
+    },
+    {
+      "title": "AI-Detected Strengths",
+      "type": "two_column_bullets",
+      "items": [
+        "Early recognition of cardiac arrest and rapid CPR initiation.",
+        "Appropriate identification of pulseless VT rhythm.",
+        "Timely defibrillation and medication administration.",
+        "Immediate resumption of CPR after shocks.",
+        "Effective coordination between CPR coach and team leader.",
+        "Appropriate rhythm transition management from pVT to PEA.",
+        "ROSC achieved successfully."
+      ]
+    },
+    {
+      "title": "AI-Detected Deficiencies",
+      "type": "bullets",
+      "items": [
+        "Mild delay in first defibrillation.",
+        "Occasional overlap in verbal commands during rhythm checks.",
+        "One prolonged pulse-check pause exceeding 10 seconds.",
+        "Reversible causes discussion initiated relatively late."
+      ]
+    },
+    {
+      "title": "Communication Analysis",
+      "type": "table",
+      "badge_col": 1,
+      "col_widths": [0.55, 0.45],
+      "rows": [
+        ["Domain",                       "AI Observation"],
+        ["Closed Loop Communication",    "Partial"],
+        ["Leadership Commands",          "Clear"],
+        ["Role Clarity",                 "Good"],
+        ["Team Coordination",            "Effective"],
+        ["Situational Awareness",        "Maintained"],
+        ["Cognitive Overload Indicators","Minimal"],
+        ["Team Silence Periods",         "None significant"]
+      ]
+    },
+    {
+      "title": "AI-Detected Workflow Deviations",
+      "type": "table",
+      "badge_col": 1,
+      "col_widths": [0.65, 0.35],
+      "rows": [
+        ["Deviation",                  "Severity"],
+        ["Delayed First Shock",        "Moderate"],
+        ["Pulse Check >10 Seconds",    "Mild"],
+        ["Delayed Hs & Ts Discussion", "Mild"]
+      ]
+    },
+    {
+      "title": "CPR Coach Analytics",
+      "type": "table",
+      "col_widths": [0.6, 0.4],
+      "rows": [
+        ["Metric",                    "Observation"],
+        ["Compression Continuity",    "Good"],
+        ["Compression Pause Warnings","2"],
+        ["Post-Shock Delay Alerts",   "0"],
+        ["Compressor Rotation",       "Appropriate"],
+        ["Shock Safety Compliance",   "Maintained"]
+      ]
+    },
+    {
+      "title": "AI-Generated Reflective Debrief Questions",
+      "type": "bullets",
+      "items": [
+        "Could the first shock have been delivered earlier?",
+        "How can pulse-check interruptions be minimized further?",
+        "Was reversible cause discussion initiated at the optimal time?",
+        "How effectively did team communication support workflow continuity?",
+        "What strategies helped maintain compression continuity?"
+      ]
+    },
+    {
+      "title": "AI Recommendations",
+      "type": "bullets",
+      "items": [
+        "Continue maintaining immediate CPR resumption after shocks.",
+        "Reinforce closed-loop communication during medication administration.",
+        "Reduce rhythm-analysis-to-shock interval further.",
+        "Initiate reversible cause discussion earlier in prolonged arrests.",
+        "Maintain structured role allocation throughout resuscitation."
+      ]
+    },
+    {
+      "title": "Overall AI Performance Assessment",
+      "type": "table",
+      "badge_col": 1,
+      "col_widths": [0.6, 0.4],
+      "rows": [
+        ["Domain",                    "Rating"],
+        ["ACLS Algorithm Adherence",  "Excellent"],
+        ["CPR Quality",               "Very Good"],
+        ["Communication Quality",     "Good"],
+        ["Team Dynamics",             "Very Good"],
+        ["Defibrillation Workflow",   "Good"],
+        ["Medication Workflow",       "Excellent"],
+        ["Overall Team Performance",  "Very Good"]
+      ]
+    },
+    {
+      "title": "Final AI Summary",
+      "type": "text",
+      "content": "The resuscitation team demonstrated effective ACLS workflow adherence with good team coordination, appropriate rhythm recognition, and successful ROSC achievement. CPR continuity and post-shock management were strong. Minor improvements are recommended in early shock delivery timing, pulse-check duration, and earlier reversible cause discussion initiation."
+    }
+  ]
+}

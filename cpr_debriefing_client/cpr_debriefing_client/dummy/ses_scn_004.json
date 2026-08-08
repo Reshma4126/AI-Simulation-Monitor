@@ -1,0 +1,221 @@
+{
+  "session_id": "SES-SCN-004",
+  "date": "2026-05-27",
+  "scenario_name": "Persistent PEA with Repeated Inappropriate Defibrillation Attempts",
+  "scenario_type": "PEA",
+  "outcome": "rosc",
+  "team_leader_name": "Simulation Team",
+  "team_size": 6,
+  "duration_ms": 682000,
+  "guideline_version": "AHA_2020",
+  "segments": [
+    {
+      "timestamp_ms": 0,
+      "time": "00:00",
+      "speaker": "Airway",
+      "role": "airway",
+      "text": "Patient collapsed!",
+      "ai_expected": "Arrest recognition"
+    },
+    {
+      "timestamp_ms": 5000,
+      "time": "00:05",
+      "speaker": "Team Leader",
+      "role": "team_leader",
+      "text": "Check pulse.",
+      "ai_expected": "Pulse check"
+    },
+    {
+      "timestamp_ms": 12000,
+      "time": "00:12",
+      "speaker": "Compressor",
+      "role": "compressor",
+      "text": "No pulse.",
+      "ai_expected": "Cardiac arrest confirmation"
+    },
+    {
+      "timestamp_ms": 18000,
+      "time": "00:18",
+      "speaker": "Team Leader",
+      "role": "team_leader",
+      "text": "Start CPR.",
+      "ai_expected": "CPR initiated"
+    },
+    {
+      "timestamp_ms": 25000,
+      "time": "00:25",
+      "speaker": "Compressor",
+      "role": "compressor",
+      "text": "Starting compressions.",
+      "ai_expected": "CPR ongoing"
+    },
+    {
+      "timestamp_ms": 55000,
+      "time": "00:55",
+      "speaker": "Defibrillator/CPR Coach",
+      "role": "defib_coach",
+      "text": "Rhythm looks like PEA.",
+      "ai_expected": "PEA recognition"
+    },
+    {
+      "timestamp_ms": 65000,
+      "time": "01:05",
+      "speaker": "Team Leader",
+      "role": "team_leader",
+      "text": "Shock him.",
+      "ai_expected": "Inappropriate shock order"
+    },
+    {
+      "timestamp_ms": 96000,
+      "time": "01:36",
+      "speaker": "Defibrillator/CPR Coach",
+      "role": "defib_coach",
+      "text": "Shock delivered.",
+      "ai_expected": "Inappropriate shock delivered"
+    },
+    {
+      "timestamp_ms": 102000,
+      "time": "01:42",
+      "speaker": "Compressor",
+      "role": "compressor",
+      "text": "Resume CPR.",
+      "ai_expected": "CPR resumed"
+    },
+    {
+      "timestamp_ms": 168000,
+      "time": "02:48",
+      "speaker": "Defibrillator/CPR Coach",
+      "role": "defib_coach",
+      "text": "Shock delivered.",
+      "ai_expected": "Second inappropriate shock"
+    },
+    {
+      "timestamp_ms": 200000,
+      "time": "03:20",
+      "speaker": "Team Leader",
+      "role": "team_leader",
+      "text": "Give epinephrine 1 mg.",
+      "ai_expected": "Epinephrine order"
+    },
+    {
+      "timestamp_ms": 208000,
+      "time": "03:28",
+      "speaker": "IV Member",
+      "role": "iv_member",
+      "text": "Epinephrine administered.",
+      "ai_expected": "Epinephrine administration"
+    },
+    {
+      "timestamp_ms": 276000,
+      "time": "04:36",
+      "speaker": "Defibrillator/CPR Coach",
+      "role": "defib_coach",
+      "text": "Shock delivered.",
+      "ai_expected": "Third inappropriate shock"
+    },
+    {
+      "timestamp_ms": 315000,
+      "time": "05:15",
+      "speaker": "Team Leader",
+      "role": "team_leader",
+      "text": "Give amiodarone 300 mg.",
+      "ai_expected": "Inappropriate amiodarone order"
+    },
+    {
+      "timestamp_ms": 325000,
+      "time": "05:25",
+      "speaker": "IV Member",
+      "role": "iv_member",
+      "text": "Amiodarone 300 mg administered.",
+      "ai_expected": "Inappropriate antiarrhythmic use"
+    },
+    {
+      "timestamp_ms": 392000,
+      "time": "06:32",
+      "speaker": "Defibrillator/CPR Coach",
+      "role": "defib_coach",
+      "text": "Shock delivered.",
+      "ai_expected": "Fourth inappropriate shock"
+    },
+    {
+      "timestamp_ms": 425000,
+      "time": "07:05",
+      "speaker": "Team Leader",
+      "role": "team_leader",
+      "text": "Give epinephrine 1 mg.",
+      "ai_expected": "Epinephrine order"
+    },
+    {
+      "timestamp_ms": 432000,
+      "time": "07:12",
+      "speaker": "IV Member",
+      "role": "iv_member",
+      "text": "Epinephrine administered.",
+      "ai_expected": "Epinephrine administration"
+    },
+    {
+      "timestamp_ms": 480000,
+      "time": "08:00",
+      "speaker": "Team Leader",
+      "role": "team_leader",
+      "text": "Think about reversible causes.",
+      "ai_expected": "Hs and Ts discussion"
+    },
+    {
+      "timestamp_ms": 495000,
+      "time": "08:15",
+      "speaker": "Airway",
+      "role": "airway",
+      "text": "Possible hypovolemia?",
+      "ai_expected": "Reversible cause discussion"
+    },
+    {
+      "timestamp_ms": 505000,
+      "time": "08:25",
+      "speaker": "IV Member",
+      "role": "iv_member",
+      "text": "IV fluids running.",
+      "ai_expected": "Intervention"
+    },
+    {
+      "timestamp_ms": 570000,
+      "time": "09:30",
+      "speaker": "Defibrillator/CPR Coach",
+      "role": "defib_coach",
+      "text": "Shock delivered.",
+      "ai_expected": "Fifth inappropriate shock"
+    },
+    {
+      "timestamp_ms": 605000,
+      "time": "10:05",
+      "speaker": "Team Leader",
+      "role": "team_leader",
+      "text": "Give another amiodarone 300 mg.",
+      "ai_expected": "Repeated inappropriate antiarrhythmic order"
+    },
+    {
+      "timestamp_ms": 612000,
+      "time": "10:12",
+      "speaker": "IV Member",
+      "role": "iv_member",
+      "text": "Amiodarone administered.",
+      "ai_expected": "Drug administration"
+    },
+    {
+      "timestamp_ms": 675000,
+      "time": "11:15",
+      "speaker": "Compressor",
+      "role": "compressor",
+      "text": "I can feel a pulse.",
+      "ai_expected": "Pulse detected"
+    },
+    {
+      "timestamp_ms": 682000,
+      "time": "11:22",
+      "speaker": "Team Leader",
+      "role": "team_leader",
+      "text": "ROSC achieved.",
+      "ai_expected": "ROSC confirmation"
+    }
+  ]
+}
