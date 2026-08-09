@@ -2,7 +2,10 @@ import json
 import logging
 from typing import Dict, Any
 
-from .communication_agents.agent import SupervisingAgent
+try:
+    from .communication_agents.agent import SupervisingAgent
+except Exception as _agent_err:
+    SupervisingAgent = None
 
 logger = logging.getLogger(__name__)
 

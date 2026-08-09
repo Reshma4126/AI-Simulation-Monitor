@@ -147,18 +147,26 @@ export default function SimulationCompletedPage() {
           </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px", paddingTop: "8px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px", paddingTop: "8px" }}>
           <button
             onClick={() => navigate(`/debrief?sessionCode=${sessionCode}`)}
-            style={{ width: "100%", height: 48, backgroundColor: "#0F766E", color: "#FFFFFF", fontWeight: 600, fontSize: 14, borderRadius: 12, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+            style={{ width: "100%", height: 44, backgroundColor: "#0F766E", color: "#FFFFFF", fontWeight: 600, fontSize: 14, borderRadius: 10, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
           >
             <FileText size={18} />
             View AI Debrief Report
           </button>
 
           <button
+            onClick={() => navigate("/leaderboard")}
+            style={{ width: "100%", height: 44, backgroundColor: "#FFFBEB", color: "#B45309", border: "1px solid #FCD34D", fontWeight: 600, fontSize: 14, borderRadius: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+          >
+            <Award size={18} color="#D97706" />
+            View Team Leaderboard
+          </button>
+
+          <button
             onClick={() => navigate("/dashboard")}
-            style={{ width: "100%", height: 48, backgroundColor: "#FFFFFF", color: "#334155", border: "1px solid #CBD5E1", fontWeight: 600, fontSize: 14, borderRadius: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+            style={{ width: "100%", height: 44, backgroundColor: "#FFFFFF", color: "#334155", border: "1px solid #CBD5E1", fontWeight: 600, fontSize: 14, borderRadius: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
           >
             <LayoutDashboard size={18} color="#64748B" />
             Return to Dashboard

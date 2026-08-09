@@ -161,21 +161,7 @@ export default function ScenarioStudioPage() {
     }
 
     try {
-      let sessionCode = sessionStorage.getItem("session_code");
-
-      // If no simulation session exists yet, create one using the existing session endpoint
-      if (!sessionCode) {
-        const createRes = await fetch(`${API}/session/create`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (!createRes.ok) throw new Error("Failed to create simulation session");
-        const sessionData = await createRes.json();
-        sessionCode = sessionData.session_code;
-        sessionStorage.setItem("session_code", sessionCode);
-      }
-
-      const res = await fetch(`${API}/api/scenario/start`, {
+      const res = await fetch(`${API}/api/scenario/launch`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -183,13 +169,14 @@ export default function ScenarioStudioPage() {
         },
         body: JSON.stringify({
           spec: spec,
-          session_code: sessionCode
+          team_name: teamName || "Resus Team"
         })
       });
 
-      if (!res.ok) throw new Error("Failed to launch scenario telemetry");
+      if (!res.ok) throw new Error("Failed to launch scenario simulation session");
 
-      // Save team name in sessionStorage for reporting
+      const data = await res.json();
+      sessionStorage.setItem("session_code", data.session_code);
       sessionStorage.setItem("team_name", teamName || "Resus Team");
 
       // Redirect to initializing screen

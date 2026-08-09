@@ -222,7 +222,7 @@ async def get_session_info(session_code: str, user: dict = Depends(get_current_u
     async with pool.acquire() as conn:
         async with conn.cursor(aiomysql.DictCursor) as cur:
             await cur.execute(
-                "SELECT session_code, started_at, ended_at, is_active FROM sessions WHERE session_code = %s",
+                "SELECT id, session_code, started_at, ended_at, is_active FROM sessions WHERE session_code = %s",
                 (session_code,)
             )
             session = await cur.fetchone()
@@ -235,6 +235,27 @@ async def get_session_info(session_code: str, user: dict = Depends(get_current_u
         "ended_at": session["ended_at"].isoformat() if session["ended_at"] else None,
         "is_active": bool(session["is_active"]),
     }
+
+
+@api_app.post("/session/student-join")
+async def student_join(body: dict):
+    """Anonymous or student portal access endpoint for active sessions."""
+    session_code = body.get("session_code", "").strip().upper()
+    if not session_code:
+        raise HTTPException(status_code=400, detail="Session code is required")
+        
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute("SELECT id, is_active FROM sessions WHERE session_code = %s", (session_code,))
+            session = await cur.fetchone()
+            if not session:
+                raise HTTPException(status_code=404, detail="Session not found")
+            if not session.get("is_active", True):
+                raise HTTPException(status_code=400, detail="Session has ended")
+
+    student_token = create_access_token({"sub": f"student_{uuid.uuid4().hex[:6]}", "role": "student"})
+    return {"token": student_token, "session_code": session_code, "role": "student"}
 
 
 @api_app.get("/session/{session_code}/log")
@@ -283,6 +304,7 @@ async def _run_background_debrief(session_code: str):
         pool = await get_db_pool()
         async with pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute("DELETE FROM debrief_reports WHERE session_code = %s AND (status = 'failed' OR status = 'FAILED')", (session_code,))
                 await cur.execute("SELECT * FROM sessions WHERE session_code = %s", (session_code,))
                 session = await cur.fetchone()
                 if not session:
@@ -309,9 +331,46 @@ async def _run_background_debrief(session_code: str):
         )
         DEBRIEF_STATUS_CACHE[session_code] = "completed"
         print(f"[BACKGROUND DEBRIEF] Successfully completed debrief for {session_code}. Score: {result.get('overall_score')}")
+
+        # Update leaderboard asynchronously on the main event loop
+        try:
+            team_name = session.get("team_name") or "Resus Team"
+            score = float(result.get("overall_score", 80.0))
+            xp_earned = int(score * 10)
+            async with pool.acquire() as conn:
+                async with conn.cursor(aiomysql.DictCursor) as cur:
+                    await cur.execute("SELECT id, total_xp, best_score, session_count FROM gamification_leaderboard WHERE team_name = %s", (team_name,))
+                    row = await cur.fetchone()
+                    now = datetime.utcnow()
+                    if row:
+                        new_xp = row["total_xp"] + xp_earned
+                        new_best = max(float(row["best_score"] or 0), score)
+                        new_count = row["session_count"] + 1
+                        level = "Novice"
+                        if new_xp >= 3000: level = "Master Resuscitationist"
+                        elif new_xp >= 1500: level = "Expert"
+                        elif new_xp >= 500: level = "Practitioner"
+                        await cur.execute(
+                            "UPDATE gamification_leaderboard SET total_xp = %s, best_score = %s, session_count = %s, level = %s, last_session_at = %s WHERE id = %s",
+                            (new_xp, new_best, new_count, level, now, row["id"])
+                        )
+                    else:
+                        level = "Novice"
+                        if xp_earned >= 3000: level = "Master Resuscitationist"
+                        elif xp_earned >= 1500: level = "Expert"
+                        elif xp_earned >= 500: level = "Practitioner"
+                        await cur.execute(
+                            "INSERT INTO gamification_leaderboard (team_name, total_xp, best_score, session_count, level, last_session_at) VALUES (%s, %s, %s, 1, %s, %s)",
+                            (team_name, xp_earned, score, level, now)
+                        )
+        except Exception as l_err:
+            print(f"[Leaderboard Async Update Warning] {l_err}")
+
     except Exception as e:
         DEBRIEF_STATUS_CACHE[session_code] = "failed"
         print(f"[BACKGROUND DEBRIEF] Error running debrief for session {session_code}: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 @api_app.post("/session/{session_code}/end")
@@ -352,6 +411,11 @@ async def generate_debrief_endpoint(
     user: dict = Depends(get_current_user),
 ):
     """Manually trigger background debrief generation for a session."""
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute("DELETE FROM debrief_reports WHERE session_code = %s AND (status = 'failed' OR status = 'FAILED')", (session_code,))
+
     DEBRIEF_STATUS_CACHE[session_code] = "running"
     background_tasks.add_task(_run_background_debrief, session_code)
     return {
@@ -366,9 +430,7 @@ async def get_debrief_status(
     session_code: str,
     user: dict = Depends(get_current_user),
 ):
-    """Return status: pending | running | completed | failed.
-    DB is always authoritative; in-memory cache is a live-generation fallback.
-    """
+    """Return status: pending | running | completed | failed."""
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         async with conn.cursor(aiomysql.DictCursor) as cur:
@@ -376,19 +438,16 @@ async def get_debrief_status(
             row = await cur.fetchone()
             if row:
                 db_status = str(row["status"]).lower()
-                # Sync cache with DB truth
-                DEBRIEF_STATUS_CACHE[session_code] = db_status
-                return {"session_code": session_code, "status": db_status}
+                if db_status in ("completed", "failed"):
+                    DEBRIEF_STATUS_CACHE[session_code] = db_status
+                    return {"session_code": session_code, "status": db_status}
 
-    # No DB record — fall back to in-memory cache (active generation)
     if session_code in DEBRIEF_STATUS_CACHE:
         return {
             "session_code": session_code,
             "status": DEBRIEF_STATUS_CACHE[session_code]
         }
 
-    # No record at all — check session exists
-    pool = await get_db_pool()
     async with pool.acquire() as conn:
         async with conn.cursor(aiomysql.DictCursor) as cur:
             await cur.execute("SELECT id FROM sessions WHERE session_code = %s", (session_code,))
@@ -434,6 +493,36 @@ async def list_debrief_reports(
             "ended_at": row["ended_at"].isoformat() if row.get("ended_at") else None,
         })
     return {"reports": results, "total": len(results)}
+
+
+@api_app.get("/api/leaderboard")
+async def get_leaderboard(limit: int = Query(20), user: dict = Depends(get_current_user)):
+    """Return ranked team leaderboard from MySQL."""
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(
+                """SELECT team_name, total_xp, level, session_count, best_score, badges, last_session_at
+                   FROM gamification_leaderboard
+                   ORDER BY total_xp DESC, best_score DESC
+                   LIMIT %s""",
+                (limit,)
+            )
+            rows = await cur.fetchall()
+
+    results = []
+    for idx, r in enumerate(rows):
+        results.append({
+            "rank": idx + 1,
+            "team_name": r["team_name"],
+            "total_xp": r["total_xp"],
+            "level": r["level"],
+            "session_count": r["session_count"],
+            "best_score": round(float(r["best_score"] or 0), 1),
+            "badges": json.loads(r["badges"]) if r.get("badges") else [],
+            "last_session_at": r["last_session_at"].isoformat() if r.get("last_session_at") else None,
+        })
+    return {"leaderboard": results, "total": len(results)}
 
 
 @api_app.get("/api/debrief/{session_code}")
@@ -512,7 +601,7 @@ from pathlib import Path
 # Add debriefing to sys.path if not present
 DEBRIEFING_PATH = Path(__file__).resolve().parent / "debriefing"
 if str(DEBRIEFING_PATH) not in sys.path:
-    sys.path.insert(0, str(DEBRIEFING_PATH))
+    sys.path.append(str(DEBRIEFING_PATH))
 
 try:
     from scenarios.generator import ScenarioGenerator
@@ -827,6 +916,92 @@ async def api_scenario_start(body: dict, user: dict = Depends(get_current_user))
                         await sio.emit("scenario_selected", spec, room=session_code)
                         
     return {"run_id": run_id, "status": "active"}
+
+@api_app.post("/api/scenario/launch")
+async def api_scenario_launch(body: dict, user: dict = Depends(require_instructor)):
+    spec = body.get("spec", {})
+    team_name = body.get("team_name", "Resus Team")
+    
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            # End any existing active session for this instructor
+            await cur.execute(
+                "UPDATE sessions SET is_active = 0, ended_at = %s WHERE created_by = %s AND is_active = 1",
+                (datetime.utcnow(), user["id"])
+            )
+            
+            # Generate fresh session code
+            code = _generate_code()
+            initial_event = {
+                "timestamp": datetime.utcnow().isoformat(),
+                "event": f"Launched scenario: {spec.get('title', 'Clinical Scenario')}",
+            }
+            event_log = json.dumps([initial_event])
+            
+            # Checklist initialization
+            raw_checklist = spec.get("checklist", [])
+            formatted_checklist = []
+            for idx, item in enumerate(raw_checklist):
+                action = item.get("action", f"Action {idx+1}")
+                formatted_checklist.append({
+                    "id": f"chk_{idx+1:02d}",
+                    "action": action,
+                    "critical": bool(item.get("critical", False)),
+                    "window_sec": int(item.get("window_sec", 60)),
+                    "status": "pending",
+                    "completed_at": None,
+                    "delay_seconds": 0
+                })
+                
+            init_condition_id = "initial"
+            if spec.get("conditions"):
+                init_condition_id = spec["conditions"][0].get("id", "initial")
+
+            await cur.execute(
+                """INSERT INTO sessions 
+                   (session_code, created_by, started_at, is_active, event_log, history, current_scenario_json, team_name, checklist_state, current_condition_id) 
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                (code, user["id"], datetime.utcnow(), True, event_log, json.dumps([]), json.dumps(spec), team_name, json.dumps(formatted_checklist), init_condition_id)
+            )
+            session_id = cur.lastrowid
+
+            # Insert DB checklist table rows
+            for chk in formatted_checklist:
+                await cur.execute(
+                    """INSERT INTO session_checklist (session_id, item_id, action, critical, window_sec, status)
+                       VALUES (%s, %s, %s, %s, %s, %s)""",
+                    (session_id, chk["id"], chk["action"], chk["critical"], chk["window_sec"], chk["status"])
+                )
+
+            # Build initial state from spec.initial_state or spec vitals
+            state = dict(DEFAULT_MONITOR_STATE)
+            initial_state_data = spec.get("initial_state") or parse_scenario_spec_to_vitals(spec)
+            for k, v in initial_state_data.items():
+                state[k] = v
+            state["last_updated"] = datetime.utcnow().isoformat()
+            state["updated_by"] = user["username"]
+            state["started_at"] = datetime.utcnow().isoformat()
+            
+            from socket_manager import sio, compute_alarms
+            state["alarms"] = compute_alarms(state)
+            
+            await cur.execute(
+                "INSERT INTO monitor_state (session_id, state_data) VALUES (%s, %s)",
+                (session_id, json.dumps(state))
+            )
+            
+            # Emit Socket.IO events to room
+            await sio.emit("state_update", state, room=code)
+            await sio.emit("rhythm_change", {
+                k: state.get(k) for k in
+                ["rhythm", "extrasystole", "HR", "ecg_lead",
+                 "artifact_electrical", "artifact_muscular", "emd_pea"]
+            }, room=code)
+            await sio.emit("scenario_selected", spec, room=code)
+            await sio.emit("checklist_updated", {"checklist": formatted_checklist}, room=code)
+
+    return {"session_code": code, "message": "New scenario simulation session launched successfully"}
 
 @api_app.post("/api/scenario/speak")
 async def api_scenario_speak(body: dict, user: dict = Depends(get_current_user)):

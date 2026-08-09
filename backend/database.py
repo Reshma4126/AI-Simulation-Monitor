@@ -3,6 +3,7 @@
 import os
 import ssl
 import json
+from datetime import datetime
 from dotenv import load_dotenv
 import aiomysql
 
@@ -169,6 +170,53 @@ async def init_db():
                 except Exception as e:
                     print(f"[DB] Info: {e}")
 
+            # Additional session columns
+            for col_name, col_type in [
+                ("team_name", "VARCHAR(255) NULL"),
+                ("checklist_state", "JSON NULL"),
+                ("gamification_state", "JSON NULL"),
+                ("condition_history", "JSON NULL"),
+                ("current_condition_id", "VARCHAR(100) NULL")
+            ]:
+                await cur.execute(f"SHOW COLUMNS FROM sessions LIKE '{col_name}'")
+                if not await cur.fetchone():
+                    try:
+                        await cur.execute(f"ALTER TABLE sessions ADD COLUMN {col_name} {col_type}")
+                    except Exception as e:
+                        print(f"[DB] Info: {e}")
+
+            # Gamification Leaderboard table
+            await cur.execute("""
+                CREATE TABLE IF NOT EXISTS gamification_leaderboard (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    team_name VARCHAR(255) UNIQUE NOT NULL,
+                    instructor_user_id INT NULL,
+                    total_xp INT DEFAULT 0,
+                    level VARCHAR(100) DEFAULT 'Novice',
+                    session_count INT DEFAULT 0,
+                    best_score FLOAT DEFAULT 0.0,
+                    badges JSON,
+                    last_session_at DATETIME,
+                    FOREIGN KEY (instructor_user_id) REFERENCES users(id) ON DELETE SET NULL
+                )
+            """)
+
+            # Session Checklist table
+            await cur.execute("""
+                CREATE TABLE IF NOT EXISTS session_checklist (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    session_id INT NOT NULL,
+                    item_id VARCHAR(100) NOT NULL,
+                    action TEXT NOT NULL,
+                    critical BOOLEAN DEFAULT 0,
+                    window_sec INT DEFAULT 0,
+                    status VARCHAR(50) DEFAULT 'pending',
+                    completed_at DATETIME NULL,
+                    delay_seconds INT DEFAULT 0,
+                    FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+                )
+            """)
+
             # Seed scenarios if empty
             await cur.execute("SELECT COUNT(*) FROM scenarios")
             count_res = await cur.fetchone()
@@ -313,20 +361,71 @@ async def save_debrief_report_async(report_data: dict) -> bool:
 
 
 def save_debrief_report_sync(report_data: dict) -> bool:
-    """Synchronous wrapper for save_debrief_report_async."""
-    import asyncio
-    try:
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
+    """Synchronously persist debrief report to MySQL using pymysql to avoid asyncio event loop conflicts."""
+    session_code = str(report_data.get("session_code", "")).strip()
+    if not session_code:
+        print("[DB] save_debrief_report_sync missing session_code")
+        return False
 
-        if loop and loop.is_running():
-            loop.create_task(save_debrief_report_async(report_data))
-            return True
-        else:
-            return asyncio.run(save_debrief_report_async(report_data))
+    overall_score = float(report_data.get("overall_score", 0.0))
+    grade = str(report_data.get("grade", "N/A"))
+    status = str(report_data.get("status", "COMPLETED")).upper()
+    pdf_path = str(report_data.get("pdf_path", ""))
+    error_message = report_data.get("error_message")
+
+    debrief_data = report_data.get("debrief_data", {})
+    if isinstance(debrief_data, (dict, list)):
+        debrief_data_json = json.dumps(debrief_data)
+    else:
+        debrief_data_json = str(debrief_data)
+
+    now_str = datetime.utcnow().isoformat()
+
+    try:
+        import pymysql
+        conn = pymysql.connect(
+            host=MYSQL_HOST,
+            port=MYSQL_PORT,
+            user=MYSQL_USER,
+            password=MYSQL_PASSWORD,
+            database=DB_NAME,
+            ssl=ssl_ctx,
+            autocommit=True,
+            cursorclass=pymysql.cursors.DictCursor
+        )
+        try:
+            with conn.cursor() as cur:
+                db_session_id = None
+                try:
+                    db_session_id = int(session_code)
+                except ValueError:
+                    cur.execute("SELECT id FROM sessions WHERE session_code = %s", (session_code,))
+                    sess_row = cur.fetchone()
+                    db_session_id = sess_row["id"] if sess_row else None
+
+                query = """
+                    INSERT INTO debrief_reports
+                    (session_id, session_code, overall_score, grade, status, debrief_data, pdf_path, error_message, created_at, updated_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE
+                    session_id = VALUES(session_id),
+                    overall_score = VALUES(overall_score),
+                    grade = VALUES(grade),
+                    status = VALUES(status),
+                    debrief_data = VALUES(debrief_data),
+                    pdf_path = VALUES(pdf_path),
+                    error_message = VALUES(error_message),
+                    updated_at = VALUES(updated_at)
+                """
+                cur.execute(query, (
+                    db_session_id, session_code, overall_score, grade, status,
+                    debrief_data_json, pdf_path, error_message, now_str, now_str
+                ))
+                print(f"[DB] Debrief report saved/updated successfully in MySQL (sync) for session_code: {session_code}")
+                return True
+        finally:
+            conn.close()
     except Exception as e:
-        print(f"[DB] Error in save_debrief_report_sync: {e}")
+        print(f"[DB] Error in save_debrief_report_sync for {session_code}: {e}")
         return False
 

@@ -255,24 +255,28 @@ async def join_session(sid, data):
     """Client joins a session room."""
     session_code = data.get("session_code")
     token = data.get("token")
-    if not session_code or not token:
-        await sio.emit("error", {"message": "Missing session_code or token"}, to=sid)
+    if not session_code:
+        await sio.emit("error", {"message": "Missing session_code"}, to=sid)
         return
 
-    try:
-        payload = decode_token(token)
-    except Exception:
-        await sio.emit("error", {"message": "Invalid token"}, to=sid)
-        return
+    payload = {"sub": "Student", "role": "student"}
+    if token:
+        try:
+            payload = decode_token(token)
+        except Exception:
+            payload = {"sub": "Student", "role": "student"}
 
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         async with conn.cursor(aiomysql.DictCursor) as cur:
-            await cur.execute("SELECT id, started_at FROM sessions WHERE session_code = %s", (session_code,))
+            await cur.execute("SELECT id, started_at, is_active FROM sessions WHERE session_code = %s", (session_code,))
             session = await cur.fetchone()
             
             if not session:
                 await sio.emit("error", {"message": "Session not found"}, to=sid)
+                return
+            if not session.get("is_active", True):
+                await sio.emit("error", {"message": "Session has ended"}, to=sid)
                 return
 
             await sio.enter_room(sid, session_code)
@@ -304,7 +308,7 @@ async def join_session(sid, data):
                 await sio.emit("session_history_log", {"event_log": event_history}, to=sid)
 
             # If session has current_scenario_id or current_scenario_json, fetch and send it
-            await cur.execute("SELECT current_scenario_id, current_scenario_json FROM sessions WHERE id = %s", (session["id"],))
+            await cur.execute("SELECT current_scenario_id, current_scenario_json, checklist_state FROM sessions WHERE id = %s", (session["id"],))
             session_row = await cur.fetchone()
             if session_row:
                 scenario = None
@@ -324,6 +328,13 @@ async def join_session(sid, data):
                         student_scenario = dict(scenario)
                         student_scenario.pop("initial_readings", None)
                         await sio.emit("scenario_selected", student_scenario, to=sid)
+
+                if session_row.get("checklist_state"):
+                    try:
+                        chk_list = json.loads(session_row["checklist_state"])
+                        await sio.emit("checklist_updated", {"checklist": chk_list}, to=sid)
+                    except Exception:
+                        pass
 
             if payload.get("role") == "instructor":
                 session_id = session["id"]
@@ -523,6 +534,170 @@ async def faculty_comment(sid, data):
         "timestamp": datetime.utcnow().isoformat() + "Z",
     }
     await sio.emit("faculty_comment", entry, room=session_code)
+
+
+@sio.event
+async def apply_condition(sid, data):
+    """Instructor applies a predefined scenario condition state."""
+    session_data = await sio.get_session(sid)
+    if not session_data or session_data.get("role") != "instructor":
+        await sio.emit("error", {"message": "Instructor role required"}, to=sid)
+        return
+
+    session_code = session_data.get("session_code")
+    condition_id = data.get("condition_id")
+    condition_name = data.get("condition_name", condition_id)
+    state_updates = data.get("state", {})
+
+    if not condition_id or not state_updates:
+        await sio.emit("error", {"message": "Invalid condition payload"}, to=sid)
+        return
+
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute("SELECT id, started_at, event_log, condition_history FROM sessions WHERE session_code = %s", (session_code,))
+            session = await cur.fetchone()
+            if not session:
+                return
+
+            await cur.execute("SELECT state_data FROM monitor_state WHERE session_id = %s", (session["id"],))
+            state_row = await cur.fetchone()
+            if not state_row:
+                return
+                
+            state = json.loads(state_row["state_data"])
+            for k, v in state_updates.items():
+                state[k] = v
+                
+            state["last_updated"] = datetime.utcnow().isoformat()
+            state["updated_by"] = session_data.get("username", "")
+            state["alarms"] = compute_alarms(state)
+
+            await cur.execute("UPDATE monitor_state SET state_data = %s WHERE session_id = %s", (json.dumps(state), session["id"]))
+
+            # Record event in event_log
+            now_iso = datetime.utcnow().isoformat()
+            event_entry = {
+                "timestamp": now_iso,
+                "event": f"Condition Changed -> {condition_name}",
+                "event_type": "CONDITION_CHANGED",
+                "condition_id": condition_id,
+                "condition_name": condition_name
+            }
+            event_log = json.loads(session["event_log"]) if session.get("event_log") else []
+            event_log.append(event_entry)
+
+            # Record condition history
+            cond_hist = json.loads(session["condition_history"]) if session.get("condition_history") else []
+            cond_hist.append({"condition_id": condition_id, "name": condition_name, "timestamp": now_iso})
+
+            await cur.execute(
+                "UPDATE sessions SET event_log = %s, condition_history = %s, current_condition_id = %s WHERE id = %s",
+                (json.dumps(event_log), json.dumps(cond_hist), condition_id, session["id"])
+            )
+
+            state["started_at"] = session["started_at"].isoformat() if session.get("started_at") else now_iso
+
+    # Broadcast updates
+    await sio.emit("state_update", state, room=session_code)
+    await sio.emit("condition_changed", {"condition_id": condition_id, "condition_name": condition_name, "timestamp": now_iso}, room=session_code)
+    await sio.emit("rhythm_change", {
+        k: state.get(k) for k in
+        ["rhythm", "extrasystole", "HR", "ecg_lead", "artifact_electrical", "artifact_muscular", "emd_pea"]
+    }, room=session_code)
+    await sio.emit("session_event", event_entry, room=session_code)
+
+
+@sio.event
+async def mark_checklist_done(sid, data):
+    """Instructor marks a checklist item completed."""
+    session_data = await sio.get_session(sid)
+    session_code = data.get("session_code") or (session_data.get("session_code") if session_data else None)
+    item_id = data.get("item_id")
+    if not session_code or not item_id:
+        print(f"[mark_checklist_done] Missing parameters: session_code={session_code}, item_id={item_id}")
+        return
+
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute("SELECT id, started_at, event_log, checklist_state, current_scenario_json FROM sessions WHERE session_code = %s", (session_code,))
+            session = await cur.fetchone()
+            if not session:
+                return
+
+            checklist = json.loads(session["checklist_state"]) if session.get("checklist_state") else []
+            if not checklist and session.get("current_scenario_json"):
+                try:
+                    scen_spec = json.loads(session["current_scenario_json"])
+                    checklist = scen_spec.get("checklist", [])
+                except Exception:
+                    checklist = []
+
+            now_dt = datetime.utcnow()
+            now_iso = now_dt.isoformat()
+            
+            start_dt = session.get("started_at") or now_dt
+            if isinstance(start_dt, str):
+                try:
+                    start_dt = datetime.fromisoformat(start_dt.replace("Z", "+00:00")).replace(tzinfo=None)
+                except Exception:
+                    start_dt = now_dt
+                    
+            elapsed_sec = max(0, int((now_dt - start_dt).total_seconds()))
+
+            action_name = item_id
+            target_item = None
+            for item in checklist:
+                if (
+                    str(item.get("id")) == str(item_id)
+                    or item.get("action") == item_id
+                    or str(item.get("item_id")) == str(item_id)
+                ):
+                    target_item = item
+                    action_name = item.get("action", item_id)
+                    window_sec = int(item.get("window_sec", 60))
+                    
+                    if elapsed_sec > window_sec:
+                        item["status"] = "completed_late"
+                        item["delay_seconds"] = elapsed_sec - window_sec
+                    else:
+                        item["status"] = "completed"
+                        item["delay_seconds"] = 0
+                    item["completed_at"] = now_iso
+                    break
+
+            if target_item:
+                # Update database checklist table if table exists
+                try:
+                    await cur.execute(
+                        """UPDATE session_checklist 
+                           SET status = %s, completed_at = %s, delay_seconds = %s 
+                           WHERE session_id = %s AND (item_id = %s OR action = %s)""",
+                        (target_item["status"], now_dt, target_item["delay_seconds"], session["id"], str(target_item.get("id", item_id)), action_name)
+                    )
+                except Exception as ex:
+                    print(f"[mark_checklist_done DB update warning] {ex}")
+
+                # Add event to log
+                event_entry = {
+                    "timestamp": now_iso,
+                    "event": f"Checklist Completed -> {action_name} ({target_item['status']})",
+                    "event_type": "CHECKLIST_COMPLETED",
+                    "item_id": target_item.get("id", item_id),
+                    "status": target_item["status"]
+                }
+                event_log = json.loads(session["event_log"]) if session.get("event_log") else []
+                event_log.append(event_entry)
+
+                await cur.execute(
+                    "UPDATE sessions SET checklist_state = %s, event_log = %s WHERE id = %s",
+                    (json.dumps(checklist), json.dumps(event_log), session["id"])
+                )
+
+                await sio.emit("checklist_updated", {"checklist": checklist}, room=session_code)
+                await sio.emit("session_event", event_entry, room=session_code)
 
 
 @sio.event

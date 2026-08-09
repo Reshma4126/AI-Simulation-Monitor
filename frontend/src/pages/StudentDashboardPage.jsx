@@ -8,15 +8,42 @@ export default function StudentDashboardPage() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const handleJoin = (e) => {
+  const handleJoin = async (e) => {
     e.preventDefault();
+    setError("");
     if (!sessionCode.trim()) {
       setError("Please enter a valid session code");
       return;
     }
     const code = sessionCode.trim().toUpperCase();
-    sessionStorage.setItem("session_code", code);
-    navigate(`/monitor/${code}`);
+
+    try {
+      const API = (import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
+      const res = await fetch(`${API}/session/student-join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_code: code })
+      });
+
+      if (res.status === 404) {
+        setError("Session not found. Please verify the code.");
+        return;
+      }
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        setError(errData.detail || "Failed to verify session");
+        return;
+      }
+
+      const info = await res.json();
+      sessionStorage.setItem("token", info.token);
+      sessionStorage.setItem("session_code", code);
+      sessionStorage.setItem("role", "student");
+      navigate(`/monitor/${code}`);
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "Failed to connect to simulation session");
+    }
   };
 
   const handleLogout = () => {

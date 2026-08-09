@@ -151,7 +151,7 @@ class ReportGenerator:
     LLM can reference exact moments, speaker quotes, and timings.
     """
 
-    MAX_RETRIES   = 2
+    MAX_RETRIES   = 1
     RETRY_DELAY_S = 1
 
     def __init__(self):
@@ -161,11 +161,14 @@ class ReportGenerator:
         self.client = OpenAI(
             base_url=base_url,
             api_key="ollama",   # required by OpenAI client; ignored by Ollama
+            timeout=15.0,       # 15s timeout to prevent thread hanging
         )
         logger.info(f"Ollama backend ready — model={self.model} url={base_url}")
 
     def is_available(self) -> bool:
-        """Check if Ollama server is reachable."""
+        """Check if Ollama server is reachable and enabled."""
+        if os.environ.get("ENABLE_OLLAMA_DEBRIEF", "false").lower() not in ("true", "1"):
+            return False
         try:
             import urllib.request
             url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434/v1").replace("/v1", "")
@@ -314,7 +317,7 @@ class ReportGenerator:
             f"Session: {json.dumps(session_context, indent=2)}\n\n"
             f"TRANSCRIPT:\n{transcript_text}"
         )
-        raw      = self._call_ollama(prompt, max_tokens=400)
+        raw      = self._call_ollama(prompt, max_tokens=200)
         verifier = FindingVerifier(set())
         return verifier.strip_tags(raw)
 
@@ -342,7 +345,7 @@ class ReportGenerator:
 
         while attempts < self.MAX_RETRIES:
             attempts += 1
-            raw = self._call_ollama(prompt, max_tokens=800)
+            raw = self._call_ollama(prompt, max_tokens=250)
             is_valid, invalid_ids = verifier.verify(raw, section_name)
 
             if is_valid:
@@ -394,6 +397,7 @@ class ReportGenerator:
                     {"role": "user",   "content": user_prompt},
                 ],
                 temperature = 0.3,
+                timeout     = 10.0,
             )
             return response.choices[0].message.content or ""
         except Exception as e:

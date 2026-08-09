@@ -16,6 +16,7 @@ import ProfilePage from "./pages/ProfilePage";
 import StudentDashboardPage from "./pages/StudentDashboardPage";
 import StudentMonitor from "./pages/StudentMonitor";
 import InstructorDashboard from "./pages/InstructorDashboard";
+import LeaderboardPage from "./pages/LeaderboardPage";
 
 export default function App() {
   return (
@@ -33,6 +34,7 @@ export default function App() {
         <Route path="/library" element={<ScenarioStudioPage />} />
         <Route path="/initializing" element={<SimulationInitializingPage />} />
         <Route path="/instructor" element={<InstructorDashboard />} />
+        <Route path="/leaderboard" element={<LeaderboardPage />} />
         <Route path="/completed" element={<SimulationCompletedPage />} />
         <Route path="/debrief" element={<DebriefPage />} />
         <Route path="/debrief/:sessionCode" element={<DebriefPage />} />

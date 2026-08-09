@@ -2,17 +2,30 @@ import os
 from pathlib import Path
 from typing import Any, Dict
 
-from langgraph.graph import StateGraph, START, END
-from langchain_core.language_models.chat_models import BaseChatModel
+try:
+    from langgraph.graph import StateGraph, START, END
+    from langchain_core.language_models.chat_models import BaseChatModel
+    LANGGRAPH_AVAILABLE = True
+except ImportError:
+    LANGGRAPH_AVAILABLE = False
+    StateGraph = START = END = BaseChatModel = None
 
 try:
-    from langgraph.checkpoint.sqlite import SqliteSaver
-    def _create_checkpointer(path: str):
-        return SqliteSaver(path)
+    if LANGGRAPH_AVAILABLE:
+        from langgraph.checkpoint.sqlite import SqliteSaver
+        def _create_checkpointer(path: str):
+            return SqliteSaver(path)
+    else:
+        def _create_checkpointer(path: str):
+            return None
 except ImportError:
-    from langgraph.checkpoint.memory import MemorySaver
-    def _create_checkpointer(path: str):
-        return MemorySaver()
+    try:
+        from langgraph.checkpoint.memory import MemorySaver
+        def _create_checkpointer(path: str):
+            return MemorySaver()
+    except ImportError:
+        def _create_checkpointer(path: str):
+            return None
 
 from .subagent1 import SubAgent1
 from .subagent2 import SubAgent2

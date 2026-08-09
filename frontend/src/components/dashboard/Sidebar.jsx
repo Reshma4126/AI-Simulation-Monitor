@@ -6,6 +6,7 @@ import {
   ClipboardList,
   FileText,
   BookOpen,
+  Award,
   Settings,
 } from "lucide-react";
 import "./dashboard.css";
@@ -55,6 +56,15 @@ export default function Sidebar({
       onClick: () => {
         if (setActiveTab) setActiveTab("reports");
         navigate("/reports");
+      },
+    },
+    {
+      id: "leaderboard",
+      label: "Leaderboard",
+      icon: Award,
+      onClick: () => {
+        if (setActiveTab) setActiveTab("leaderboard");
+        navigate("/leaderboard");
       },
     },
 

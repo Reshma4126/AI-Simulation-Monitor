@@ -403,7 +403,199 @@ class ScenarioGenerator:
 
             # Narration
             "narration_intro": intro_text,
+
+            # Simulation Conditions & Patient Initial State
+            "initial_state": self._derive_initial_state(template.get("rhythm_type", "VF")),
+            "conditions": self._derive_conditions(template.get("rhythm_type", "VF")),
         }
+
+    def _derive_initial_state(self, rhythm_type: str) -> dict:
+        conds = self._derive_conditions(rhythm_type)
+        return conds[0]["state"] if conds else {
+            "rhythm": "Sinus Rhythm", "HR": 75.0, "pulse_rate": 75.0,
+            "ABP_sys": 120.0, "ABP_dia": 80.0, "MAP": 93.0,
+            "SpO2": 98.0, "avRR": 14.0, "etCO2": 35.0,
+            "PAP_sys": 20.0, "PAP_dia": 10.0, "Tblood": 37.0, "emd_pea": False
+        }
+
+    def _derive_conditions(self, rhythm_type: str) -> List[dict]:
+        rt = (rhythm_type or "").upper()
+        
+        if "VF" in rt or "FIBRILLATION" in rt:
+            return [
+                {
+                    "id": "initial",
+                    "name": "Initial Presentation",
+                    "description": "Patient experiencing chest tightness and palpitations.",
+                    "state": {"rhythm": "Sinus Rhythm", "HR": 75.0, "pulse_rate": 75.0, "ABP_sys": 120.0, "ABP_dia": 80.0, "MAP": 93.0, "SpO2": 98.0, "avRR": 14.0, "etCO2": 35.0, "PAP_sys": 20.0, "PAP_dia": 10.0, "Tblood": 37.0, "emd_pea": False},
+                },
+                {
+                    "id": "deteriorating",
+                    "name": "Deterioration",
+                    "description": "Tachycardic, hypotensive, altered mental state.",
+                    "state": {"rhythm": "Sinus Tachycardia", "HR": 125.0, "pulse_rate": 125.0, "ABP_sys": 95.0, "ABP_dia": 60.0, "MAP": 71.0, "SpO2": 92.0, "avRR": 24.0, "etCO2": 30.0, "PAP_sys": 24.0, "PAP_dia": 12.0, "Tblood": 37.0, "emd_pea": False},
+                },
+                {
+                    "id": "arrest_vf",
+                    "name": "VF Arrest",
+                    "description": "Sudden collapse. Ventricular Fibrillation. No pulse. Shock advised.",
+                    "state": {"rhythm": "Ventricular Fibrillation", "HR": 0.0, "pulse_rate": 0.0, "ABP_sys": 0.0, "ABP_dia": 0.0, "MAP": 0.0, "SpO2": 0.0, "avRR": 0.0, "etCO2": 0.0, "PAP_sys": 0.0, "PAP_dia": 0.0, "Tblood": 37.0, "emd_pea": False},
+                },
+                {
+                    "id": "post_shock",
+                    "name": "Post-Shock CPR",
+                    "description": "Shock delivered. High quality CPR in progress. Capnography 12 mmHg.",
+                    "state": {"rhythm": "Ventricular Fibrillation", "HR": 0.0, "pulse_rate": 0.0, "ABP_sys": 0.0, "ABP_dia": 0.0, "MAP": 0.0, "SpO2": 0.0, "avRR": 0.0, "etCO2": 12.0, "PAP_sys": 0.0, "PAP_dia": 0.0, "Tblood": 37.0, "emd_pea": False},
+                },
+                {
+                    "id": "rosc",
+                    "name": "ROSC Achieved",
+                    "description": "Return of Spontaneous Circulation. Pulse restored. Monitor post-cardiac arrest.",
+                    "state": {"rhythm": "Sinus Rhythm", "HR": 88.0, "pulse_rate": 88.0, "ABP_sys": 110.0, "ABP_dia": 70.0, "MAP": 83.0, "SpO2": 96.0, "avRR": 16.0, "etCO2": 36.0, "PAP_sys": 22.0, "PAP_dia": 11.0, "Tblood": 37.0, "emd_pea": False},
+                }
+            ]
+        elif "PEA" in rt:
+            return [
+                {
+                    "id": "initial",
+                    "name": "Initial Presentation",
+                    "description": "Patient complaining of severe dyspnea.",
+                    "state": {"rhythm": "Sinus Rhythm", "HR": 70.0, "pulse_rate": 70.0, "ABP_sys": 110.0, "ABP_dia": 70.0, "MAP": 83.0, "SpO2": 96.0, "avRR": 16.0, "etCO2": 35.0, "PAP_sys": 20.0, "PAP_dia": 10.0, "Tblood": 37.0, "emd_pea": False},
+                },
+                {
+                    "id": "deteriorating",
+                    "name": "Severe Bradycardia",
+                    "description": "Profound hypotension, agonal breathing.",
+                    "state": {"rhythm": "Sinus Bradycardia", "HR": 42.0, "pulse_rate": 42.0, "ABP_sys": 75.0, "ABP_dia": 45.0, "MAP": 55.0, "SpO2": 85.0, "avRR": 8.0, "etCO2": 25.0, "PAP_sys": 15.0, "PAP_dia": 8.0, "Tblood": 36.8, "emd_pea": False},
+                },
+                {
+                    "id": "arrest_pea",
+                    "name": "PEA Arrest",
+                    "description": "Organized electrical activity on monitor, but NO central pulse (PEA). Non-shockable.",
+                    "state": {"rhythm": "Sinus Rhythm", "HR": 50.0, "pulse_rate": 0.0, "ABP_sys": 0.0, "ABP_dia": 0.0, "MAP": 0.0, "SpO2": 0.0, "avRR": 0.0, "etCO2": 10.0, "PAP_sys": 0.0, "PAP_dia": 0.0, "Tblood": 36.8, "emd_pea": True},
+                },
+                {
+                    "id": "cpr_epi",
+                    "name": "CPR & Epinephrine",
+                    "description": "CPR ongoing, Epinephrine 1mg IV administered. Identify reversible causes.",
+                    "state": {"rhythm": "Sinus Rhythm", "HR": 60.0, "pulse_rate": 0.0, "ABP_sys": 0.0, "ABP_dia": 0.0, "MAP": 0.0, "SpO2": 0.0, "avRR": 0.0, "etCO2": 18.0, "PAP_sys": 0.0, "PAP_dia": 0.0, "Tblood": 36.8, "emd_pea": True},
+                },
+                {
+                    "id": "rosc",
+                    "name": "ROSC Achieved",
+                    "description": "Femoral pulse felt! Blood pressure restored.",
+                    "state": {"rhythm": "Sinus Rhythm", "HR": 82.0, "pulse_rate": 82.0, "ABP_sys": 105.0, "ABP_dia": 65.0, "MAP": 78.0, "SpO2": 95.0, "avRR": 14.0, "etCO2": 34.0, "PAP_sys": 21.0, "PAP_dia": 10.0, "Tblood": 37.0, "emd_pea": False},
+                }
+            ]
+        elif "ASYSTOLE" in rt:
+            return [
+                {
+                    "id": "initial",
+                    "name": "Initial Presentation",
+                    "description": "Severe respiratory distress, lethargic.",
+                    "state": {"rhythm": "Sinus Bradycardia", "HR": 45.0, "pulse_rate": 45.0, "ABP_sys": 80.0, "ABP_dia": 50.0, "MAP": 60.0, "SpO2": 88.0, "avRR": 10.0, "etCO2": 22.0, "PAP_sys": 16.0, "PAP_dia": 8.0, "Tblood": 36.5, "emd_pea": False},
+                },
+                {
+                    "id": "arrest_asystole",
+                    "name": "Asystole Arrest",
+                    "description": "Flatline on 2 leads. No pulse. Start CPR immediately.",
+                    "state": {"rhythm": "Asystole", "HR": 0.0, "pulse_rate": 0.0, "ABP_sys": 0.0, "ABP_dia": 0.0, "MAP": 0.0, "SpO2": 0.0, "avRR": 0.0, "etCO2": 0.0, "PAP_sys": 0.0, "PAP_dia": 0.0, "Tblood": 36.5, "emd_pea": False},
+                },
+                {
+                    "id": "cpr_asystole",
+                    "name": "High-Quality CPR",
+                    "description": "CPR in progress, Epinephrine IV given.",
+                    "state": {"rhythm": "Asystole", "HR": 0.0, "pulse_rate": 0.0, "ABP_sys": 0.0, "ABP_dia": 0.0, "MAP": 0.0, "SpO2": 0.0, "avRR": 0.0, "etCO2": 15.0, "PAP_sys": 0.0, "PAP_dia": 0.0, "Tblood": 36.5, "emd_pea": False},
+                },
+                {
+                    "id": "rosc",
+                    "name": "ROSC Achieved",
+                    "description": "Junctional escape rhythm restored with pulse.",
+                    "state": {"rhythm": "Junctional Rhythm", "HR": 55.0, "pulse_rate": 55.0, "ABP_sys": 90.0, "ABP_dia": 60.0, "MAP": 70.0, "SpO2": 92.0, "avRR": 12.0, "etCO2": 32.0, "PAP_sys": 18.0, "PAP_dia": 9.0, "Tblood": 36.7, "emd_pea": False},
+                }
+            ]
+        elif "BRADY" in rt:
+            return [
+                {
+                    "id": "initial",
+                    "name": "Initial Presentation",
+                    "description": "Dizziness and fatigue.",
+                    "state": {"rhythm": "Sinus Rhythm", "HR": 60.0, "pulse_rate": 60.0, "ABP_sys": 120.0, "ABP_dia": 80.0, "MAP": 93.0, "SpO2": 98.0, "avRR": 14.0, "etCO2": 35.0, "PAP_sys": 20.0, "PAP_dia": 10.0, "Tblood": 37.0, "emd_pea": False},
+                },
+                {
+                    "id": "symptomatic_brady",
+                    "name": "Symptomatic Bradycardia",
+                    "description": "HR dropping, pale, diaphoretic.",
+                    "state": {"rhythm": "Sinus Bradycardia", "HR": 38.0, "pulse_rate": 38.0, "ABP_sys": 80.0, "ABP_dia": 50.0, "MAP": 60.0, "SpO2": 90.0, "avRR": 10.0, "etCO2": 28.0, "PAP_sys": 15.0, "PAP_dia": 8.0, "Tblood": 37.0, "emd_pea": False},
+                },
+                {
+                    "id": "severe_block",
+                    "name": "3rd Degree AV Block",
+                    "description": "Complete heart block, profound hypotension.",
+                    "state": {"rhythm": "3rd Degree AV Block", "HR": 28.0, "pulse_rate": 28.0, "ABP_sys": 65.0, "ABP_dia": 40.0, "MAP": 48.0, "SpO2": 82.0, "avRR": 8.0, "etCO2": 20.0, "PAP_sys": 12.0, "PAP_dia": 6.0, "Tblood": 37.0, "emd_pea": False},
+                },
+                {
+                    "id": "pacing_recovered",
+                    "name": "Pacing / Recovery",
+                    "description": "Transcutaneous pacing initiated, hemodynamics stabilized.",
+                    "state": {"rhythm": "Paced Rhythm", "HR": 70.0, "pulse_rate": 70.0, "ABP_sys": 110.0, "ABP_dia": 70.0, "MAP": 83.0, "SpO2": 96.0, "avRR": 14.0, "etCO2": 35.0, "PAP_sys": 20.0, "PAP_dia": 10.0, "Tblood": 37.0, "emd_pea": False},
+                }
+            ]
+        elif "TACHY" in rt or "SVT" in rt:
+            return [
+                {
+                    "id": "initial",
+                    "name": "Initial Presentation",
+                    "description": "Palpitations and lightheadedness.",
+                    "state": {"rhythm": "Sinus Rhythm", "HR": 85.0, "pulse_rate": 85.0, "ABP_sys": 120.0, "ABP_dia": 80.0, "MAP": 93.0, "SpO2": 98.0, "avRR": 16.0, "etCO2": 36.0, "PAP_sys": 20.0, "PAP_dia": 10.0, "Tblood": 37.0, "emd_pea": False},
+                },
+                {
+                    "id": "unstable_svt",
+                    "name": "Unstable SVT",
+                    "description": "Narrow complex tachycardia at 185 bpm, chest tightness.",
+                    "state": {"rhythm": "SVT", "HR": 185.0, "pulse_rate": 185.0, "ABP_sys": 90.0, "ABP_dia": 55.0, "MAP": 67.0, "SpO2": 92.0, "avRR": 26.0, "etCO2": 30.0, "PAP_sys": 22.0, "PAP_dia": 11.0, "Tblood": 37.0, "emd_pea": False},
+                },
+                {
+                    "id": "post_cardioversion",
+                    "name": "Post-Cardioversion",
+                    "description": "Synchronized cardioversion / Adenosine successful.",
+                    "state": {"rhythm": "Sinus Rhythm", "HR": 80.0, "pulse_rate": 80.0, "ABP_sys": 115.0, "ABP_dia": 75.0, "MAP": 88.0, "SpO2": 97.0, "avRR": 15.0, "etCO2": 35.0, "PAP_sys": 20.0, "PAP_dia": 10.0, "Tblood": 37.0, "emd_pea": False},
+                }
+            ]
+        else:
+            # Default / Megacode sequence
+            return [
+                {
+                    "id": "initial",
+                    "name": "Initial Presentation",
+                    "description": "Patient conscious, mild distress.",
+                    "state": {"rhythm": "Sinus Rhythm", "HR": 75.0, "pulse_rate": 75.0, "ABP_sys": 120.0, "ABP_dia": 80.0, "MAP": 93.0, "SpO2": 98.0, "avRR": 14.0, "etCO2": 35.0, "PAP_sys": 20.0, "PAP_dia": 10.0, "Tblood": 37.0, "emd_pea": False},
+                },
+                {
+                    "id": "deteriorating",
+                    "name": "Deterioration",
+                    "description": "Rapid atrial fibrillation with hypoperfusion.",
+                    "state": {"rhythm": "Atrial Fibrillation", "HR": 140.0, "pulse_rate": 140.0, "ABP_sys": 95.0, "ABP_dia": 60.0, "MAP": 71.0, "SpO2": 90.0, "avRR": 22.0, "etCO2": 30.0, "PAP_sys": 24.0, "PAP_dia": 12.0, "Tblood": 37.0, "emd_pea": False},
+                },
+                {
+                    "id": "arrest_vf",
+                    "name": "VF Arrest",
+                    "description": "Cardiac arrest — Ventricular Fibrillation.",
+                    "state": {"rhythm": "Ventricular Fibrillation", "HR": 0.0, "pulse_rate": 0.0, "ABP_sys": 0.0, "ABP_dia": 0.0, "MAP": 0.0, "SpO2": 0.0, "avRR": 0.0, "etCO2": 0.0, "PAP_sys": 0.0, "PAP_dia": 0.0, "Tblood": 37.0, "emd_pea": False},
+                },
+                {
+                    "id": "post_shock_pea",
+                    "name": "Post-Shock PEA",
+                    "description": "Rhythm changed to Sinus, but pulse is absent.",
+                    "state": {"rhythm": "Sinus Rhythm", "HR": 45.0, "pulse_rate": 0.0, "ABP_sys": 0.0, "ABP_dia": 0.0, "MAP": 0.0, "SpO2": 0.0, "avRR": 0.0, "etCO2": 12.0, "PAP_sys": 0.0, "PAP_dia": 0.0, "Tblood": 37.0, "emd_pea": True},
+                },
+                {
+                    "id": "rosc",
+                    "name": "ROSC Achieved",
+                    "description": "Full ROSC with stable vitals.",
+                    "state": {"rhythm": "Sinus Rhythm", "HR": 85.0, "pulse_rate": 85.0, "ABP_sys": 110.0, "ABP_dia": 70.0, "MAP": 83.0, "SpO2": 95.0, "avRR": 15.0, "etCO2": 35.0, "PAP_sys": 21.0, "PAP_dia": 10.0, "Tblood": 37.0, "emd_pea": False},
+                }
+            ]
 
     def _build_intro(
         self,

@@ -39,7 +39,7 @@ export default function DebriefPage() {
     sessionStorage.getItem("session_code") ||
     sessionStorage.getItem("currentSessionCode") ||
     sessionStorage.getItem("activeSessionCode") ||
-    "R04ZOG"; // fallback for standalone testing
+    "";
 
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -178,8 +178,8 @@ export default function DebriefPage() {
 
   // Extract debrief fields
   const debrief = debriefData?.debrief || debriefData || {};
-  const overallScore = debriefData?.overall_score ?? debrief.overall_score ?? 100;
-  const grade = debriefData?.grade || debrief.grade || "A";
+  const overallScore = debriefData?.overall_score ?? debrief.overall_score ?? null;
+  const grade = debriefData?.grade || debrief.grade || (overallScore !== null ? (overallScore >= 90 ? "A" : overallScore >= 80 ? "B" : "C") : "N/A");
   const findings = debrief.findings || [];
   const timelineEvents = debrief.timeline?.events || [];
   const domainScores = debrief.domain_scores || [];
@@ -191,7 +191,7 @@ export default function DebriefPage() {
     narrativeRaw.scenario_name ||
     debrief.scenario_name ||
     debriefData?.scenario_name ||
-    "ACLS Cardiac Arrest Simulation";
+    "Clinical Simulation Session";
   // reflective_prompts can be a string (JSON array) or direct array
   let reflectivePrompts = [];
   try {
@@ -303,10 +303,12 @@ export default function DebriefPage() {
               <h3 className="text-base font-bold text-red-900">Debrief Generation Failed</h3>
               <p className="text-xs text-red-700 max-w-md mx-auto">{errorMsg}</p>
               <button
-                onClick={() => {
+                onClick={async () => {
                   setLoadingStatus("running");
-                  triggerGeneration();
-                  checkStatusAndPoll();
+                  await triggerGeneration();
+                  setTimeout(() => {
+                    checkStatusAndPoll();
+                  }, 500);
                 }}
                 className="mt-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold inline-flex items-center gap-2 cursor-pointer"
               >

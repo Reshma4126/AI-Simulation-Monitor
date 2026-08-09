@@ -68,9 +68,9 @@ const SIZE_CLASSES = {
 };
 
 const COMPACT_SIZE_CLASSES = {
-  xl: "text-2xl font-bold font-mono",
-  lg: "text-xl font-bold font-mono",
-  md: "text-lg font-bold font-mono",
+  xl: "text-lg font-bold font-mono",
+  lg: "text-base font-bold font-mono",
+  md: "text-sm font-bold font-mono",
 };
 
 export default function VitalsPanel({ onVitalClick, compact, isStudent, renderPopover }) {
@@ -97,10 +97,10 @@ export default function VitalsPanel({ onVitalClick, compact, isStudent, renderPo
   };
 
   return (
-    <div className="vitals-panel">
+    <div className="vitals-panel" style={compact ? { gap: "3px", padding: "2px", overflow: "hidden" } : {}}>
       {VITAL_GROUPS.filter(g => isGroupVisible(g.label)).map((group) => (
-        <div key={group.label} className="vital-brick">
-          <div className="vital-brick-label" style={{ color: group.color }}>
+        <div key={group.label} className="vital-brick" style={compact ? { padding: "3px 6px", margin: 0, borderRadius: "4px" } : {}}>
+          <div className="vital-brick-label" style={{ color: group.color, fontSize: compact ? "9px" : "11px", marginBottom: "1px" }}>
             {group.label}
           </div>
           {group.items.filter(i => isItemVisible(i.key)).map((item) => {
@@ -132,10 +132,10 @@ export default function VitalsPanel({ onVitalClick, compact, isStudent, renderPo
                 key={item.key}
                 className={`vital-value-row ${item.highlight ? "vital-highlight" : ""}`}
                 onClick={() => onVitalClick && onVitalClick(group.label === "NIBP" ? "nbp" : item.key)}
-                style={{ cursor: onVitalClick ? "pointer" : "default" }}
+                style={{ cursor: onVitalClick ? "pointer" : "default", whiteSpace: "nowrap", gap: compact ? "4px" : "8px" }}
               >
                 {showSublabel && (
-                  <span className="vital-sublabel" style={{ color: group.color }}>
+                  <span className="vital-sublabel" style={{ color: group.color, fontSize: compact ? "9px" : "11px" }}>
                     {item.label}
                   </span>
                 )}
@@ -145,9 +145,9 @@ export default function VitalsPanel({ onVitalClick, compact, isStudent, renderPo
                 >
                   {displayVal}
                 </span>
-                {group.label !== "NIBP" && <span className="vital-unit">{item.unit}</span>}
+                {group.label !== "NIBP" && <span className="vital-unit" style={{ fontSize: compact ? "9px" : "11px" }}>{item.unit}</span>}
                 {group.label === "NIBP" && (state.nibp_state === "COMPLETE" || !state.nibp_state) && state.show_map !== false && !isHidden && (
-                  <div className="vital-nibp-map" style={{ fontSize: compact ? "10px" : "12px", color: group.color, marginTop: "2px" }}>
+                  <div className="vital-nibp-map" style={{ fontSize: compact ? "9px" : "12px", color: group.color, marginTop: "1px" }}>
                     MAP {Math.round(state.NBP_mean ?? 93)}
                   </div>
                 )}

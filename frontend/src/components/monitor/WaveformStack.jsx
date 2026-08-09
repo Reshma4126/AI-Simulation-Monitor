@@ -6,7 +6,7 @@ import ABPTrack from "./ABPTrack";
 import PAPTrack from "./PAPTrack";
 import ETCO2Track from "./ETCO2Track";
 
-const TRACK_GAP = 8;
+const TRACK_GAP = 4;
 const MAX_TRACK_HEIGHT = 250;
 
 export default function WaveformStack({ lead = "II" }) {
@@ -51,11 +51,9 @@ export default function WaveformStack({ lead = "II" }) {
 
   const trackSize = useMemo(() => {
     const width = Math.max(300, size.width || 800);
-    const availableHeight = Math.max(120, (size.height || 400) - TRACK_GAP * (trackCount - 1));
-    const height = Math.max(
-      60,
-      Math.min(MAX_TRACK_HEIGHT, Math.floor(availableHeight / trackCount))
-    );
+    const totalGaps = TRACK_GAP * (trackCount - 1);
+    const availableHeight = Math.max(100, (size.height || 400) - totalGaps - 4);
+    const height = Math.max(40, Math.floor(availableHeight / trackCount));
     return { width, height };
   }, [size, trackCount]);
 
@@ -65,7 +63,7 @@ export default function WaveformStack({ lead = "II" }) {
   );
 
   return (
-    <div ref={stackRef} className="waveform-stack" style={{ display: "flex", flexDirection: "column", gap: `${TRACK_GAP}px`, height: "100%", minHeight: "300px" }}>
+    <div ref={stackRef} className="waveform-stack" style={{ display: "flex", flexDirection: "column", gap: `${TRACK_GAP}px`, height: "100%", overflow: "hidden" }}>
       {showEcg && <ECGTrack lead={lead} width={trackSize.width} height={trackSize.height} />}
       {showPleth && <PlethTrack width={trackSize.width} height={trackSize.height} gain={plethGain} />}
       {showIbp && <ABPTrack width={trackSize.width} height={trackSize.height} />}

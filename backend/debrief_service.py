@@ -16,7 +16,7 @@ from typing import Dict, Any, Optional
 # Ensure backend/debriefing is on sys.path so its internal modules resolve correctly
 DEBRIEFING_DIR = Path(__file__).resolve().parent / "debriefing"
 if str(DEBRIEFING_DIR) not in sys.path:
-    sys.path.insert(0, str(DEBRIEFING_DIR))
+    sys.path.append(str(DEBRIEFING_DIR))
 
 logger = logging.getLogger("DebriefService")
 
@@ -83,13 +83,17 @@ class DebriefService:
             events = extractor.extract(attributed_segments) if attributed_segments else []
 
             # ── Stage 4: Communication / NLP Analysis ─────────────────────────
-            from analysis.nlp_engine import NLPEngine
-            nlp = NLPEngine()
-            nlp_res = nlp.process(
-                session_id=session_id,
-                segments=attributed_segments,
-            )
-            comm_metrics = nlp_res if isinstance(nlp_res, dict) else {}
+            comm_metrics = {}
+            try:
+                from analysis.nlp_engine import NLPEngine
+                nlp = NLPEngine()
+                nlp_res = nlp.process(
+                    session_id=session_id,
+                    segments=attributed_segments,
+                )
+                comm_metrics = nlp_res if isinstance(nlp_res, dict) else {}
+            except Exception as nlp_err:
+                logger.warning(f"Stage 4 NLP Analysis safely skipped (missing dependency): {nlp_err}")
 
             # ── Stage 5: Build UnifiedTimeline ────────────────────────────────
             from schemas.event_schema import UnifiedTimeline
