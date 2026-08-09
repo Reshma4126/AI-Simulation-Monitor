@@ -76,16 +76,20 @@ export default function InstructorDashboard() {
 
     // Create or get session
     const initSession = async () => {
-      const res = await fetch(`${API}/session/create`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      setSessionCode(data.session_code);
-      sessionStorage.setItem("session_code", data.session_code);
+      let code = sessionStorage.getItem("session_code");
+      if (!code) {
+        const res = await fetch(`${API}/session/create`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        code = data.session_code;
+        sessionStorage.setItem("session_code", code);
+      }
+      setSessionCode(code);
 
       if (!socket.connected) socket.connect();
-      socket.emit("join_session", { session_code: data.session_code, token });
+      socket.emit("join_session", { session_code: code, token });
       connect(); // Connect to simman-ecg engine
       sessionStartRef.current = Date.now();
     };

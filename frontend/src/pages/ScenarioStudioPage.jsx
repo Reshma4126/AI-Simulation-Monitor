@@ -154,25 +154,27 @@ export default function ScenarioStudioPage() {
   const handleLaunch = async () => {
     if (!spec) return;
     const token = sessionStorage.getItem("token");
-    let sessionCode = sessionStorage.getItem("session_code");
-
-    if (!sessionCode) {
-      try {
-        const initRes = await fetch(`${API}/session/create`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const initData = await initRes.json();
-        sessionCode = initData.session_code;
-        sessionStorage.setItem("session_code", sessionCode);
-      } catch (err) {
-        console.error("Failed to create session code on the fly:", err);
-        alert("Failed to create a session. Please return to the Dashboard first.");
-        return;
-      }
+    if (!token) {
+      alert("Authentication token not found. Please log in.");
+      navigate("/");
+      return;
     }
 
     try {
+      let sessionCode = sessionStorage.getItem("session_code");
+
+      // If no simulation session exists yet, create one using the existing session endpoint
+      if (!sessionCode) {
+        const createRes = await fetch(`${API}/session/create`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!createRes.ok) throw new Error("Failed to create simulation session");
+        const sessionData = await createRes.json();
+        sessionCode = sessionData.session_code;
+        sessionStorage.setItem("session_code", sessionCode);
+      }
+
       const res = await fetch(`${API}/api/scenario/start`, {
         method: "POST",
         headers: {
@@ -186,15 +188,15 @@ export default function ScenarioStudioPage() {
       });
 
       if (!res.ok) throw new Error("Failed to launch scenario telemetry");
-      
+
       // Save team name in sessionStorage for reporting
       sessionStorage.setItem("team_name", teamName || "Resus Team");
-      
+
       // Redirect to initializing screen
       navigate("/initializing");
     } catch (err) {
-      console.error(err);
-      alert("Error launching scenario. Please try again.");
+      console.error("[ScenarioStudioPage] handleLaunch Error:", err);
+      alert(`Error launching scenario: ${err.message}`);
     }
   };
 
@@ -247,7 +249,7 @@ export default function ScenarioStudioPage() {
       {/* Navbar */}
       <Navbar
         searchQuery=""
-        setSearchQuery={() => {}}
+        setSearchQuery={() => { }}
         showNotifications={showNotifications}
         setShowNotifications={setShowNotifications}
         showProfileMenu={showProfileMenu}
@@ -263,14 +265,14 @@ export default function ScenarioStudioPage() {
           sidebarExpanded={sidebarExpanded}
           setSidebarExpanded={setSidebarExpanded}
           activeTab="simulation"
-          setActiveTab={() => {}}
+          setActiveTab={() => { }}
           handleStartSimulation={() => navigate("/initializing")}
           onOpenModal={(modalType) => setActiveModal(modalType)}
         />
 
         {/* Scrollable Main Content */}
         <main className="medsim-main-content" style={{ display: "grid", gridTemplateColumns: "380px 1fr", gap: "24px", padding: "32px 40px", overflowY: "auto" }}>
-          
+
           {/* Left Configuration Panel */}
           <div style={{
             backgroundColor: "#FFFFFF",
@@ -297,7 +299,7 @@ export default function ScenarioStudioPage() {
                 <p style={{ fontSize: "11px", color: "#64748B", margin: 0 }}>Design your simulation parameters</p>
               </div>
             </div>
-            
+
             {/* Difficulty Level */}
             <div>
               <label style={{ display: "block", fontSize: "11px", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px" }}>Difficulty Level</label>
