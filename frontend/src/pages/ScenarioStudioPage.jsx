@@ -154,14 +154,27 @@ export default function ScenarioStudioPage() {
   const handleLaunch = async () => {
     if (!spec) return;
     const token = sessionStorage.getItem("token");
-    const sessionCode = sessionStorage.getItem("session_code");
-
-    if (!sessionCode) {
-      alert("No active session code found. Please ensure you are logged in correctly.");
+    if (!token) {
+      alert("Authentication token not found. Please log in.");
+      navigate("/");
       return;
     }
 
     try {
+      let sessionCode = sessionStorage.getItem("session_code");
+      
+      // If no simulation session exists yet, create one using the existing session endpoint
+      if (!sessionCode) {
+        const createRes = await fetch(`${API}/session/create`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!createRes.ok) throw new Error("Failed to create simulation session");
+        const sessionData = await createRes.json();
+        sessionCode = sessionData.session_code;
+        sessionStorage.setItem("session_code", sessionCode);
+      }
+
       const res = await fetch(`${API}/api/scenario/start`, {
         method: "POST",
         headers: {
@@ -182,8 +195,8 @@ export default function ScenarioStudioPage() {
       // Redirect to initializing screen
       navigate("/initializing");
     } catch (err) {
-      console.error(err);
-      alert("Error launching scenario. Please try again.");
+      console.error("[ScenarioStudioPage] handleLaunch Error:", err);
+      alert(`Error launching scenario: ${err.message}`);
     }
   };
 
