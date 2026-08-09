@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import socket from "../../socket";
 
+const API = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+
 export default function CommunicationPanel({ sessionCode }) {
   const [activeTab, setActiveTab] = useState("events");
   const [events, setEvents] = useState([]);
@@ -8,20 +10,46 @@ export default function CommunicationPanel({ sessionCode }) {
   
   const eventEndRef = useRef(null);
 
+  // Fetch past event log history on load
+  useEffect(() => {
+    if (!sessionCode) return;
+    const token = sessionStorage.getItem("token");
+    fetch(`${API}/session/${sessionCode}/log`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data && Array.isArray(data.event_log)) {
+          setEvents(data.event_log);
+        }
+      })
+      .catch((err) => console.error("[CommunicationPanel] Fetch log error:", err));
+  }, [sessionCode]);
+
   useEffect(() => {
     const handleEvent = (entry) => {
       setEvents((prev) => {
-        // Keep only last 20 events to prevent DOM bloat in the small footer
+        if (prev.some((e) => e.timestamp === entry.timestamp && e.event === entry.event)) {
+          return prev;
+        }
         const updated = [...prev, entry];
-        if (updated.length > 20) return updated.slice(updated.length - 20);
+        if (updated.length > 50) return updated.slice(updated.length - 50);
         return updated;
       });
       setTimeout(() => eventEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
     };
 
+    const handleHistoryLog = (data) => {
+      if (data && Array.isArray(data.event_log)) {
+        setEvents(data.event_log);
+      }
+    };
+
     socket.on("session_event", handleEvent);
+    socket.on("session_history_log", handleHistoryLog);
     return () => {
       socket.off("session_event", handleEvent);
+      socket.off("session_history_log", handleHistoryLog);
     };
   }, []);
 
@@ -51,7 +79,7 @@ export default function CommunicationPanel({ sessionCode }) {
           className={`comm-tab ${activeTab === "events" ? "active" : ""}`}
           onClick={() => setActiveTab("events")}
         >
-          Event Log
+          Event Log ({events.length})
         </button>
         <button 
           className={`comm-tab ${activeTab === "chat" ? "active" : ""}`}

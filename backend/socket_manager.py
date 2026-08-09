@@ -296,6 +296,12 @@ async def join_session(sid, data):
                 state = json.loads(state_row["state_data"])
                 state["started_at"] = session["started_at"].isoformat() if session["started_at"] else datetime.utcnow().isoformat()
                 await sio.emit("state_update", state, to=sid)
+            # Send current event log history to the client
+            await cur.execute("SELECT event_log FROM sessions WHERE id = %s", (session["id"],))
+            sess_event_row = await cur.fetchone()
+            if sess_event_row and sess_event_row.get("event_log"):
+                event_history = json.loads(sess_event_row["event_log"])
+                await sio.emit("session_history_log", {"event_log": event_history}, to=sid)
 
             # If session has current_scenario_id or current_scenario_json, fetch and send it
             await cur.execute("SELECT current_scenario_id, current_scenario_json FROM sessions WHERE id = %s", (session["id"],))
@@ -409,11 +415,12 @@ async def update_rhythm(sid, data):
             
             await cur.execute("UPDATE monitor_state SET state_data = %s WHERE session_id = %s", (json.dumps(state), session["id"]))
             
-            event_log = json.loads(session["event_log"]) if session["event_log"] else []
-            event_log.append({
+            event_entry = {
                 "timestamp": datetime.utcnow().isoformat(),
                 "event": f"Rhythm -> {state.get('rhythm')}, HR -> {state.get('HR')}",
-            })
+            }
+            event_log = json.loads(session["event_log"]) if session["event_log"] else []
+            event_log.append(event_entry)
             await cur.execute("UPDATE sessions SET event_log = %s WHERE id = %s", (json.dumps(event_log), session["id"]))
             
             state["started_at"] = session["started_at"].isoformat() if session["started_at"] else datetime.utcnow().isoformat()
@@ -424,6 +431,7 @@ async def update_rhythm(sid, data):
         ["rhythm", "extrasystole", "HR", "ecg_lead",
          "artifact_electrical", "artifact_muscular", "emd_pea"]
     }, room=session_code)
+    await sio.emit("session_event", event_entry, room=session_code)
 
 
 @sio.event
@@ -606,9 +614,20 @@ async def select_scenario(sid, data):
             await cur.execute("UPDATE monitor_state SET state_data = %s WHERE session_id = %s", (json.dumps(state), session["id"]))
             
             state["started_at"] = session["started_at"].isoformat() if session["started_at"] else datetime.utcnow().isoformat()
-            
+
+            event_entry = {
+                "timestamp": datetime.utcnow().isoformat(),
+                "event": f"Scenario loaded: {scenario['name']}",
+            }
+            await cur.execute("SELECT event_log FROM sessions WHERE id = %s", (session["id"],))
+            sess_row = await cur.fetchone()
+            event_log = json.loads(sess_row["event_log"]) if sess_row and sess_row["event_log"] else []
+            event_log.append(event_entry)
+            await cur.execute("UPDATE sessions SET event_log = %s WHERE id = %s", (json.dumps(event_log), session["id"]))
+
     await sio.emit("state_update", state, room=session_code)
     await sio.emit("alarm_update", {"alarms": state["alarms"]}, room=session_code)
+    await sio.emit("session_event", event_entry, room=session_code)
     await emit_scenario_selected(session_code, scenario)
 
 
@@ -678,17 +697,19 @@ async def apply_all_settings(sid, data):
 
             await cur.execute("UPDATE monitor_state SET state_data = %s WHERE session_id = %s", (json.dumps(state), session["id"]))
 
-            event_log = json.loads(session["event_log"]) if session["event_log"] else []
-            event_log.append({
+            event_entry = {
                 "timestamp": datetime.utcnow().isoformat(),
                 "event": f"Applied atomic settings update",
-            })
+            }
+            event_log = json.loads(session["event_log"]) if session["event_log"] else []
+            event_log.append(event_entry)
             await cur.execute("UPDATE sessions SET event_log = %s WHERE id = %s", (json.dumps(event_log), session["id"]))
 
             state["started_at"] = session["started_at"].isoformat() if session["started_at"] else datetime.utcnow().isoformat()
 
     await sio.emit("state_update", state, room=session_code)
     await sio.emit("alarm_update", {"alarms": state["alarms"]}, room=session_code)
+    await sio.emit("session_event", event_entry, room=session_code)
 
     # If rhythm/HR changed, broadcast rhythm_change
     if any(k in data for k in ["rhythm", "extrasystole", "HR", "ecg_lead", "artifact_electrical", "artifact_muscular", "emd_pea"]):
@@ -764,17 +785,19 @@ async def _apply_update(session, session_code, field, value, username):
             await cur.execute("SELECT started_at, event_log FROM sessions WHERE id = %s", (session["id"],))
             sess_row = await cur.fetchone()
             
-            event_log = json.loads(sess_row["event_log"]) if sess_row["event_log"] else []
-            event_log.append({
+            event_entry = {
                 "timestamp": datetime.utcnow().isoformat(),
                 "event": f"{field} -> {value}",
-            })
+            }
+            event_log = json.loads(sess_row["event_log"]) if sess_row["event_log"] else []
+            event_log.append(event_entry)
             await cur.execute("UPDATE sessions SET event_log = %s WHERE id = %s", (json.dumps(event_log), session["id"]))
             
             state["started_at"] = sess_row["started_at"].isoformat() if sess_row["started_at"] else datetime.utcnow().isoformat()
 
     await sio.emit("state_update", state, room=session_code)
     await sio.emit("alarm_update", {"alarms": state["alarms"]}, room=session_code)
+    await sio.emit("session_event", event_entry, room=session_code)
 
 
 async def _start_transfer(session, session_code, field, target_value,

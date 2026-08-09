@@ -92,22 +92,7 @@ export default function InstructorDashboard() {
 
     initSession();
 
-    const handleStateUpdate = (state) => {
-      setFullState(state);
-      useECGStore.getState().onState({
-        heart_rate: state.HR ?? state.heartRate ?? 80,
-        spo2: state.SpO2 ?? state.spo2 ?? 98,
-        sys_bp: state.ABP_sys ?? state.sysBP ?? 120,
-        dia_bp: state.ABP_dia ?? state.diaBP ?? 80,
-        pap_sys: state.PAP_sys ?? state.papSys ?? 25,
-        pap_dia: state.PAP_dia ?? state.papDia ?? 10,
-        etco2: state.etCO2 ?? state.etco2 ?? 38,
-        resp_rate: state.avRR ?? state.respRate ?? 12,
-        rhythm: state.rhythm ?? state.ecgRhythm ?? "NSR",
-        transfer_time: state.transfer_time ?? 0,
-        transfer_fn: state.transfer_fn ?? "IMMEDIATE",
-      });
-    };
+    const handleStateUpdate = (state) => setFullState(state);
     const handleAlarmUpdate = (data) => {
       useMonitorStore.setState({ alarms: data.alarms });
       
@@ -123,17 +108,7 @@ export default function InstructorDashboard() {
       }
     };
     
-    const handleRhythmChange = (data) => {
-      setFullState(data);
-      if (data.rhythm || data.HR) {
-        useECGStore.getState().onState({
-          heart_rate: data.HR ?? 80,
-          rhythm: data.rhythm ?? "NSR",
-          spo2: 98, sys_bp: 120, dia_bp: 80, pap_sys: 25, pap_dia: 10, etco2: 38, resp_rate: 12,
-          transfer_time: 0, transfer_fn: "IMMEDIATE"
-        });
-      }
-    };
+    const handleRhythmChange = (data) => setFullState(data);
     const handleSessionEvent = (entry) => appendEvent(entry);
     const handleSessionEnded = () => setSessionEnded();
     const handleError = (data) => console.error("[SIO Error]", data.message);
@@ -227,12 +202,17 @@ export default function InstructorDashboard() {
           method: "POST", headers: { Authorization: `Bearer ${token}` } 
         });
       } catch (e) {
-        console.error("Failed to end session", e);
+        console.error("Failed to end session on logout", e);
       }
     }
+    sessionStorage.clear();
     socket.disconnect();
     setShowEndConfirmModal(false);
-    navigate("/completed");
+    navigate("/debrief/" + sessionCode);
+  };
+
+  const handleLogout = () => {
+    setShowEndConfirmModal(true);
   };
 
   const handleVitalClick = useCallback((key) => {
@@ -252,23 +232,23 @@ export default function InstructorDashboard() {
         <div className="dialog-overlay" style={{ zIndex: 9999 }}>
           <div className="dialog-box" style={{ textAlign: "center", padding: 32 }}>
             <h2 style={{ color: "var(--alarm-red)", marginBottom: 16 }}>Session Ended</h2>
-            <button className="btn-classic btn-ok" onClick={handleLogout}>Return to Login</button>
+            <button className="btn-classic btn-ok" onClick={() => navigate("/")}>Return to Login</button>
           </div>
         </div>
       )}
 
       {showEndConfirmModal && (
-        <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(15, 23, 42, 0.6)", backdropFilter: "blur(4px)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div style={{ backgroundColor: "#FFFFFF", borderRadius: 16, padding: 28, maxWidth: 440, width: "100%", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.2)", textAlign: "center" }}>
+        <div className="dialog-overlay" style={{ zIndex: 10000 }}>
+          <div className="dialog-box" style={{ textAlign: "center", padding: 28, maxWidth: 440, width: "100%" }}>
             <h2 style={{ color: "#0F172A", marginBottom: 8, fontSize: 20, fontWeight: 700 }}>End Simulation Session?</h2>
             <p style={{ color: "#475569", fontSize: 13, marginBottom: 24, lineHeight: 1.5 }}>
               Are you sure you want to end the active simulation? This will stop telemetry, save session data, and transfer control to the AI debrief generator.
             </p>
             <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
-              <button onClick={() => setShowEndConfirmModal(false)} style={{ padding: "10px 20px", borderRadius: 10, border: "1px solid #CBD5E1", backgroundColor: "#FFFFFF", color: "#475569", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
+              <button onClick={() => setShowEndConfirmModal(false)} className="btn-classic btn-cancel">
                 Cancel
               </button>
-              <button onClick={handleConfirmEndSession} style={{ padding: "10px 20px", borderRadius: 10, border: "none", backgroundColor: "#0F766E", color: "#FFFFFF", fontWeight: 600, fontSize: 13, cursor: "pointer", boxShadow: "0 2px 6px rgba(15, 118, 110, 0.2)" }}>
+              <button onClick={handleConfirmEndSession} className="btn-classic btn-apply">
                 Confirm & End Session →
               </button>
             </div>
@@ -287,6 +267,7 @@ export default function InstructorDashboard() {
           <span className="topbar-role">INSTRUCTOR</span>
         </div>
         <div className="topbar-center">
+          <button className="btn-classic btn-sm" onClick={() => setOpenDialog("HR")}>❤️ Cardiac / Rhythm</button>
           <button className="btn-classic btn-sm" onClick={() => setShowTrendsModal(true)}>📈 Trends</button>
           <button className="btn-classic btn-sm" onClick={() => setShowScenarioDrawer(true)}>📋 Case Details</button>
           <button className="btn-classic btn-sm" onClick={openScenarioList}>📄 Change Scenario</button>
@@ -296,7 +277,7 @@ export default function InstructorDashboard() {
         <div className="topbar-right">
           <span className="sim-timer-value" style={{marginRight: 10, color: '#00FF44'}}>{formatTime(elapsed)}</span>
           <span className="topbar-session">Session: <strong>{sessionCode}</strong></span>
-          <button className="btn-classic btn-sm" onClick={() => setShowEndConfirmModal(true)} style={{marginLeft: 10}}>End Session</button>
+          <button className="btn-classic btn-sm" onClick={handleLogout} style={{marginLeft: 10}}>End Session</button>
         </div>
       </div>
 
