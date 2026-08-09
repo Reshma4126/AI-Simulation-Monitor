@@ -1,138 +1,213 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Activity, ArrowLeft, User, Mail, Building, CheckCircle } from "lucide-react";
-import "../components/dashboard/dashboard.css";
+import { Activity, ArrowLeft, User, Lock, UserCheck, GraduationCap, CheckCircle } from "lucide-react";
+import "../styles/auth.css";
+
+const API = (import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
 
 export default function RegistrationRequestPage() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [institution, setInstitution] = useState("");
-  const [role, setRole] = useState("instructor");
+  const [role, setRole] = useState("instructor"); // "instructor" | "student"
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
+    setError("");
+
+    if (!username.trim()) {
+      setError("Username / Email is required.");
+      return;
+    }
+
+    if (password.length < 4) {
+      setError("Password must be at least 4 characters long.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch(`${API}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: username.trim(),
+          password,
+          role,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.detail || "Registration failed. Please try again.");
+      }
+
+      setSubmitted(true);
+    } catch (err) {
+      setError(err.message || "Could not register user.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-100 p-4 font-sans text-slate-900">
-      <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-xl p-8 space-y-6">
-        <div className="flex justify-center">
-          <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700">
-            <Activity className="w-7 h-7 stroke-[2.2]" />
+    <div className="auth-page">
+      <div className="auth-card">
+        {/* App Header */}
+        <div className="auth-header">
+          <div className="auth-logo">
+            <Activity size={30} />
+          </div>
+          <div>
+            <h1 className="auth-title">Create Account</h1>
+            <span className="auth-badge">Register for MedSim AI</span>
           </div>
         </div>
 
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-            Request Access
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Submit an instructor registration request to your clinical simulation admin
-          </p>
-        </div>
-
         {!submitted ? (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">
-                Full Name
-              </label>
-              <div className="medsim-input-wrapper">
-                <User className="medsim-input-icon" />
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Dr. Jane Smith"
-                  className="medsim-input-field"
-                  style={{ paddingLeft: "42px" }}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">
-                Institutional Email
-              </label>
-              <div className="medsim-input-wrapper">
-                <Mail className="medsim-input-icon" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="jane.smith@hospital.org"
-                  className="medsim-input-field"
-                  style={{ paddingLeft: "42px" }}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">
-                Hospital / Academic Institution
-              </label>
-              <div className="medsim-input-wrapper">
-                <Building className="medsim-input-icon" />
-                <input
-                  type="text"
-                  required
-                  value={institution}
-                  onChange={(e) => setInstitution(e.target.value)}
-                  placeholder="St. Jude Medical Center"
-                  className="medsim-input-field"
-                  style={{ paddingLeft: "42px" }}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">
-                Requested Role
-              </label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className="w-full h-11 px-3 bg-slate-50 border border-slate-200 focus:border-teal-700 focus:bg-white rounded-xl text-sm outline-none transition-all"
+          <>
+            {/* Explicit Role Selection */}
+            <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+              <button
+                type="button"
+                onClick={() => { setRole("instructor"); setError(""); }}
+                style={{
+                  flex: 1,
+                  padding: "12px 8px",
+                  borderRadius: "12px",
+                  border: role === "instructor" ? "2px solid #0F766E" : "1px solid #E2E8F0",
+                  backgroundColor: role === "instructor" ? "#F0FDFA" : "#F8FAFC",
+                  color: role === "instructor" ? "#0F766E" : "#64748B",
+                  fontWeight: 700,
+                  fontSize: "13px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  transition: "all 0.2s ease"
+                }}
               >
-                <option value="instructor">Clinical Instructor</option>
-                <option value="administrator">Simulation Lab Admin</option>
-              </select>
+                <UserCheck size={18} color={role === "instructor" ? "#0F766E" : "#64748B"} />
+                Instructor
+              </button>
+              <button
+                type="button"
+                onClick={() => { setRole("student"); setError(""); }}
+                style={{
+                  flex: 1,
+                  padding: "12px 8px",
+                  borderRadius: "12px",
+                  border: role === "student" ? "2px solid #0F766E" : "1px solid #E2E8F0",
+                  backgroundColor: role === "student" ? "#F0FDFA" : "#F8FAFC",
+                  color: role === "student" ? "#0F766E" : "#64748B",
+                  fontWeight: 700,
+                  fontSize: "13px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                <GraduationCap size={18} color={role === "student" ? "#0F766E" : "#64748B"} />
+                Student
+              </button>
             </div>
 
-            <button
-              type="submit"
-              className="w-full h-11 bg-teal-700 hover:bg-teal-800 text-white font-semibold text-sm rounded-xl cursor-pointer shadow-xs transition-colors"
-            >
-              Submit Registration Request →
-            </button>
-          </form>
+            <form onSubmit={handleSubmit} className="auth-form">
+              <div className="auth-field">
+                <label className="auth-label">Username / Institutional Email</label>
+                <div className="auth-input-container">
+                  <User className="auth-input-icon" />
+                  <input
+                    type="text"
+                    required
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="e.g. dr.smith or student1"
+                    className="auth-input"
+                  />
+                </div>
+              </div>
+
+              <div className="auth-field">
+                <label className="auth-label">Password</label>
+                <div className="auth-input-container">
+                  <Lock className="auth-input-icon" />
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="auth-input"
+                  />
+                </div>
+              </div>
+
+              <div className="auth-field">
+                <label className="auth-label">Confirm Password</label>
+                <div className="auth-input-container">
+                  <Lock className="auth-input-icon" />
+                  <input
+                    type="password"
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="auth-input"
+                  />
+                </div>
+              </div>
+
+              {error && (
+                <div style={{ padding: "10px", borderRadius: "10px", backgroundColor: "#FEF2F2", color: "#DC2626", fontSize: "12px", fontWeight: 600, textAlign: "center", marginBottom: "16px" }}>
+                  {error}
+                </div>
+              )}
+
+              <button type="submit" disabled={loading} className="auth-btn-primary">
+                {loading ? "Creating Account..." : `Register as ${role === "instructor" ? "Instructor" : "Student"} →`}
+              </button>
+            </form>
+          </>
         ) : (
-          <div className="p-4 rounded-xl bg-teal-50 border border-teal-200 text-center space-y-2">
-            <CheckCircle className="w-8 h-8 text-teal-700 mx-auto" />
-            <h3 className="font-bold text-sm text-teal-900">Request Submitted</h3>
-            <p className="text-xs text-teal-700">
-              Thank you, <strong>{name}</strong>. Your request for <strong>{institution}</strong> has been sent for review.
+          <div style={{ padding: "20px", borderRadius: "12px", backgroundColor: "#F0FDFA", border: "1px solid #CCFBF1", textAlign: "center" }}>
+            <CheckCircle size={40} color="#0F766E" style={{ margin: "0 auto 12px" }} />
+            <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#0F766E", marginBottom: "6px" }}>
+              Account Created Successfully!
+            </h3>
+            <p style={{ fontSize: "12px", color: "#334155", marginBottom: "16px" }}>
+              User <strong>{username}</strong> has been registered as an <strong>{role}</strong>. You can now sign in with your credentials.
             </p>
             <button
               onClick={() => navigate("/")}
-              className="mt-2 w-full py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-xs font-semibold cursor-pointer"
+              className="auth-btn-primary"
             >
-              Return to Sign In →
+              Proceed to Sign In →
             </button>
           </div>
         )}
 
-        <div className="pt-4 border-t border-slate-100 text-center">
+        <div style={{ textAlign: "center", marginTop: "20px", paddingTop: "16px", borderTop: "1px solid #E2E8F0" }}>
           <Link
             to="/"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-teal-700 transition-colors"
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 600, color: "#64748B", textDecoration: "none" }}
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
+            <ArrowLeft size={14} />
             Back to Sign In
           </Link>
         </div>

@@ -4,13 +4,14 @@ import random
 import string
 import json
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
 
 import socketio
 import aiomysql
+from typing import Optional
 from pathlib import Path
-from fastapi import FastAPI, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, Query, Response, WebSocket, WebSocketDisconnect, BackgroundTasks
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -18,8 +19,11 @@ from auth import (
     hash_password,
     verify_password,
     create_access_token,
+    decode_token,
     get_current_user,
+    require_authenticated_user,
     require_instructor,
+    require_student,
 )
 from database import (
     init_db,
@@ -29,6 +33,7 @@ from models import (
     LoginRequest,
     RegisterRequest,
     TokenResponse,
+    UserResponse,
     DEFAULT_MONITOR_STATE,
     PARAMETER_SPEC,
 )
@@ -79,30 +84,59 @@ api_app = FastAPI(title="AI Simulation Monitor", lifespan=lifespan)
 
 api_app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ],
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
+
 # ── Auth Routes ───────────────────────────────────────────────────
 
 @api_app.post("/auth/login", response_model=TokenResponse)
-async def login(body: LoginRequest):
+async def login(body: LoginRequest, response: Response):
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         async with conn.cursor(aiomysql.DictCursor) as cur:
             await cur.execute("SELECT * FROM users WHERE username = %s", (body.username,))
             user = await cur.fetchone()
 
+    # Generic error message to prevent username enumeration
     if not user or not verify_password(body.password, user["password_hash"]):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(status_code=401, detail="Invalid username, password, or role.")
+
+    # Validate requested role matches authenticated user's actual database role
+    if body.role and user["role"] != body.role:
+        raise HTTPException(status_code=401, detail="Invalid username, password, or role.")
+
+    expires_delta = timedelta(days=7) if body.remember_me else timedelta(hours=24)
 
     token = create_access_token({
         "sub": user["username"],
         "role": user["role"],
-    })
+        "id": user["id"],
+    }, expires_delta=expires_delta)
+
+    # Set secure HttpOnly cookie for production session security
+    max_age_seconds = int(expires_delta.total_seconds())
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        samesite="lax",
+        secure=False,
+        max_age=max_age_seconds,
+        path="/",
+    )
 
     session_code = None
     if user["role"] == "instructor":
@@ -119,12 +153,33 @@ async def login(body: LoginRequest):
     return TokenResponse(
         access_token=token,
         role=user["role"],
+        user=UserResponse(id=user["id"], username=user["username"], role=user["role"]),
         session_code=session_code,
     )
 
 
+@api_app.post("/auth/logout")
+async def logout(response: Response):
+    response.delete_cookie(key="access_token", path="/")
+    return {"message": "Logged out successfully"}
+
+
+@api_app.get("/auth/me")
+async def get_me(user: dict = Depends(get_current_user)):
+    return {
+        "id": user.get("id"),
+        "username": user.get("username"),
+        "role": user.get("role"),
+    }
+
+
 @api_app.post("/auth/register")
-async def register(body: RegisterRequest, user: dict = Depends(require_instructor)):
+async def register(body: RegisterRequest):
+    if not body.username or not body.password:
+        raise HTTPException(status_code=400, detail="Username and password are required")
+        
+    role = body.role if body.role in ("instructor", "student") else "student"
+    
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         async with conn.cursor() as cur:
@@ -135,10 +190,13 @@ async def register(body: RegisterRequest, user: dict = Depends(require_instructo
 
             await cur.execute(
                 "INSERT INTO users (username, password_hash, role, created_at) VALUES (%s, %s, %s, %s)",
-                (body.username, hash_password(body.password), body.role, datetime.utcnow())
+                (body.username, hash_password(body.password), role, datetime.utcnow())
             )
+            await conn.commit()
             
-    return {"message": f"User '{body.username}' created with role '{body.role}'"}
+    return {"message": f"User '{body.username}' registered successfully with role '{role}'"}
+
+
 
 
 # ── Meta Routes ───────────────────────────────────────────────────
@@ -156,34 +214,45 @@ def _generate_code(length=6) -> str:
 
 
 @api_app.post("/session/create")
-async def create_session(user: dict = Depends(require_instructor)):
+async def create_session(body: Optional[dict] = None, user: dict = Depends(require_instructor)):
+    force_new = body.get("force_new", False) if body else False
+    spec = body.get("spec") if body else None
+
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         async with conn.cursor(aiomysql.DictCursor) as cur:
-            await cur.execute(
-                "SELECT session_code FROM sessions WHERE created_by = %s AND is_active = 1",
-                (user["id"],)
-            )
-            existing = await cur.fetchone()
-            if existing:
-                return {
-                    "session_code": existing["session_code"],
-                    "message": "Existing active session returned",
-                }
+            if not force_new and not spec:
+                await cur.execute(
+                    "SELECT session_code FROM sessions WHERE created_by = %s AND is_active = 1",
+                    (user["id"],)
+                )
+                existing = await cur.fetchone()
+                if existing:
+                    return {
+                        "session_code": existing["session_code"],
+                        "message": "Existing active session returned",
+                    }
 
             code = _generate_code()
             event_log = json.dumps([{"timestamp": datetime.utcnow().isoformat(), "event": "Session created"}])
             history = json.dumps([])
+            scenario_json = json.dumps(spec) if spec else None
             
             await cur.execute(
                 """INSERT INTO sessions 
-                   (session_code, created_by, started_at, is_active, event_log, history) 
-                   VALUES (%s, %s, %s, %s, %s, %s)""",
-                (code, user["id"], datetime.utcnow(), True, event_log, history)
+                   (session_code, created_by, started_at, is_active, event_log, history, current_scenario_json) 
+                   VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+                (code, user["id"], datetime.utcnow(), True, event_log, history, scenario_json)
             )
             session_id = cur.lastrowid
 
             state = dict(DEFAULT_MONITOR_STATE)
+            if spec:
+                vitals = parse_scenario_spec_to_vitals(spec)
+                for k, v in vitals.items():
+                    state[k] = v
+                state["initial_readings_hidden"] = False
+
             state["last_updated"] = datetime.utcnow().isoformat()
             state["updated_by"] = user["username"]
             
@@ -193,6 +262,7 @@ async def create_session(user: dict = Depends(require_instructor)):
             )
 
     return {"session_code": code, "message": "New session created"}
+
 
 
 @api_app.get("/session/{session_code}/state")
@@ -737,7 +807,7 @@ async def api_scenario_start(body: dict, user: dict = Depends(get_current_user))
                         state = json.loads(state_row["state_data"])
                         for k, v in vitals.items():
                             state[k] = v
-                        state["initial_readings_hidden"] = True
+                        state["initial_readings_hidden"] = False
                         state["last_updated"] = datetime.utcnow().isoformat()
                         state["updated_by"] = user.get("username", "")
                         
@@ -746,7 +816,28 @@ async def api_scenario_start(body: dict, user: dict = Depends(get_current_user))
                         
                         await cur.execute("UPDATE monitor_state SET state_data = %s WHERE session_id = %s", (json.dumps(state), session["id"]))
                         
+                        # Apply initial scenario state to SimMan ECG Engine state machine
+                        try:
+                            from simman_engine.state_machine import engine
+                            from ecg_state import ECGStateUpdate
+                            engine_update = {}
+                            if "HR" in state: engine_update["heart_rate"] = state["HR"]
+                            if "rhythm" in state: engine_update["rhythm"] = state["rhythm"]
+                            if "ABP_sys" in state: engine_update["sys_bp"] = state["ABP_sys"]
+                            if "ABP_dia" in state: engine_update["dia_bp"] = state["ABP_dia"]
+                            if "SpO2" in state: engine_update["spo2"] = state["SpO2"]
+                            if "avRR" in state: engine_update["resp_rate"] = state["avRR"]
+                            if "etCO2" in state: engine_update["etco2"] = state["etCO2"]
+                            if "PAP_sys" in state: engine_update["pap_sys"] = state["PAP_sys"]
+                            if "PAP_dia" in state: engine_update["pap_dia"] = state["PAP_dia"]
+                            
+                            if engine_update:
+                                await engine.apply_command(ECGStateUpdate.model_validate(engine_update))
+                        except Exception as e:
+                            print(f"[api_scenario_start] Engine sync warning: {e}")
+
                         # Emit updates to SIO room
+
                         await sio.emit("state_update", state, room=session_code)
                         await sio.emit("rhythm_change", {
                             k: state.get(k) for k in
@@ -826,6 +917,15 @@ async def ws_ecg(websocket: WebSocket):
     await websocket.accept()
     print(f"[WS] Client connected: {websocket.client}")
 
+    raw_token = websocket.query_params.get("token") or websocket.cookies.get("access_token")
+    auth_user = None
+    if raw_token:
+        try:
+            payload = decode_token(raw_token)
+            auth_user = {"username": payload.get("sub"), "role": payload.get("role")}
+        except Exception:
+            pass
+
     async def send_fn(data: bytes) -> None:
         await websocket.send_bytes(data)
 
@@ -844,6 +944,13 @@ async def ws_ecg(websocket: WebSocket):
             msg_type = msg.get("type")
 
             if msg_type == "SET_STATE":
+                if auth_user and auth_user.get("role") not in ("instructor", "operator", "admin"):
+                    await websocket.send_text(json.dumps({
+                        "type": "ERROR",
+                        "message": "Instructor role required to update state machine"
+                    }))
+                    continue
+
                 payload = msg.get("payload", {})
                 try:
                     update = ECGStateUpdate.model_validate(payload)

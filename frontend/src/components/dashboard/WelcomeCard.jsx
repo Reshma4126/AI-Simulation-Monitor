@@ -1,8 +1,19 @@
 import React from "react";
 import { Play, Clock } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 import "./dashboard.css";
 
 export default function WelcomeCard({ handleStartSimulation }) {
+  const { user } = useAuth();
+
+  const getGreetingName = () => {
+    if (!user || !user.username) return "Instructor";
+    const name = user.username;
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  };
+
+  const roleTitle = user?.role === "student" ? "Student" : "Clinical Instructor";
+
   return (
     <section className="medsim-welcome-card">
       <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -16,7 +27,7 @@ export default function WelcomeCard({ handleStartSimulation }) {
               margin: 0,
             }}
           >
-            Good Morning, Dr. John Doe
+            Welcome, {getGreetingName()}
           </h1>
           <span
             style={{
@@ -40,7 +51,7 @@ export default function WelcomeCard({ handleStartSimulation }) {
                 backgroundColor: "#94A3B8",
               }}
             />
-            No active simulation running
+            {roleTitle}
           </span>
         </div>
 
@@ -55,7 +66,7 @@ export default function WelcomeCard({ handleStartSimulation }) {
           }}
         >
           <Clock size={14} color="#94A3B8" />
-          <span>Last Login • Today • 09:15 AM</span>
+          <span>Active Session • MedSim AI Clinical Platform</span>
         </div>
       </div>
 
@@ -68,3 +79,4 @@ export default function WelcomeCard({ handleStartSimulation }) {
     </section>
   );
 }
+

@@ -13,9 +13,11 @@ export default function CommunicationPanel({ sessionCode }) {
   // Fetch past event log history on load
   useEffect(() => {
     if (!sessionCode) return;
-    const token = sessionStorage.getItem("token");
+    const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
     fetch(`${API}/session/${sessionCode}/log`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers,
+      credentials: "include"
     })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {

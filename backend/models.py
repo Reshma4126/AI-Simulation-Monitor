@@ -9,6 +9,8 @@ from pydantic import BaseModel, Field
 class LoginRequest(BaseModel):
     username: str
     password: str
+    role: Optional[str] = None
+    remember_me: Optional[bool] = False
 
 
 class RegisterRequest(BaseModel):
@@ -17,9 +19,16 @@ class RegisterRequest(BaseModel):
     role: str = "student"
 
 
+class UserResponse(BaseModel):
+    id: int
+    username: str
+    role: str
+
+
 class TokenResponse(BaseModel):
     access_token: str
     role: str
+    user: Optional[UserResponse] = None
     session_code: Optional[str] = None
 
 

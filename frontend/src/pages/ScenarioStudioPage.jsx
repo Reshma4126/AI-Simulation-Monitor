@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import {
   Activity,
   Volume2,
@@ -78,14 +79,12 @@ export default function ScenarioStudioPage() {
 
   // Load configuration options
   useEffect(() => {
-    const token = sessionStorage.getItem("token");
-    if (!token) {
-      navigate("/");
-      return;
-    }
+    const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
     fetch(`${API}/api/scenario/list`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers,
+      credentials: "include"
     })
       .then((res) => {
         if (!res.ok) throw new Error("Failed to load options");
@@ -105,7 +104,9 @@ export default function ScenarioStudioPage() {
   const handleGenerate = async () => {
     setLoading(true);
     setSpec(null);
-    const token = sessionStorage.getItem("token");
+    const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
 
     try {
       let resSpec;
@@ -113,10 +114,8 @@ export default function ScenarioStudioPage() {
         // Parse custom instructor text first
         const res = await fetch(`${API}/api/scenario/instructor`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
+          headers,
+          credentials: "include",
           body: JSON.stringify({ text: customText })
         });
         if (!res.ok) throw new Error("Failed to parse custom scenario");
@@ -126,10 +125,8 @@ export default function ScenarioStudioPage() {
         // Standard generator
         const res = await fetch(`${API}/api/scenario/generate`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
+          headers,
+          credentials: "include",
           body: JSON.stringify({
             level: selectedLevel,
             location: selectedLocation,
@@ -153,34 +150,32 @@ export default function ScenarioStudioPage() {
 
   const handleLaunch = async () => {
     if (!spec) return;
-    const token = sessionStorage.getItem("token");
-    if (!token) {
-      alert("Authentication token not found. Please log in.");
-      navigate("/");
-      return;
-    }
+    const token = sessionStorage.getItem("token") || localStorage.getItem("token");
 
     try {
-      let sessionCode = sessionStorage.getItem("session_code");
-      
-      // If no simulation session exists yet, create one using the existing session endpoint
-      if (!sessionCode) {
-        const createRes = await fetch(`${API}/session/create`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (!createRes.ok) throw new Error("Failed to create simulation session");
-        const sessionData = await createRes.json();
-        sessionCode = sessionData.session_code;
-        sessionStorage.setItem("session_code", sessionCode);
-      }
+      // Clear old session code to guarantee fresh session isolation for launched scenario
+      sessionStorage.removeItem("session_code");
+
+      const headers = {
+        "Content-Type": "application/json",
+      };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const createRes = await fetch(`${API}/session/create`, {
+        method: "POST",
+        headers,
+        credentials: "include",
+        body: JSON.stringify({ force_new: true, spec })
+      });
+      if (!createRes.ok) throw new Error("Failed to create simulation session");
+      const sessionData = await createRes.json();
+      const sessionCode = sessionData.session_code;
+      sessionStorage.setItem("session_code", sessionCode);
 
       const res = await fetch(`${API}/api/scenario/start`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
+        headers,
+        credentials: "include",
         body: JSON.stringify({
           spec: spec,
           session_code: sessionCode
@@ -203,14 +198,14 @@ export default function ScenarioStudioPage() {
   const handleNarrate = () => {
     if (!spec || narrating) return;
     setNarrating(true);
-    const token = sessionStorage.getItem("token");
+    const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
 
     fetch(`${API}/api/scenario/narrate`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
+      headers,
+      credentials: "include",
       body: JSON.stringify({ spec })
     })
       .then((res) => res.json())
@@ -239,9 +234,10 @@ export default function ScenarioStudioPage() {
     );
   };
 
-  const handleLogout = () => {
-    sessionStorage.clear();
-    navigate("/");
+  const { logout } = useAuth();
+  const handleLogout = async () => {
+    await logout();
+    navigate("/", { replace: true });
   };
 
   return (

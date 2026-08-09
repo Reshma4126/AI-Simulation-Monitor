@@ -61,15 +61,13 @@ export default function InstructorDashboard() {
   const [selectedLead, setSelectedLead] = useState("II");
 
   useEffect(() => {
-    const token = sessionStorage.getItem("token");
-    const role = sessionStorage.getItem("role");
-    if (!token || role !== "instructor") {
-      navigate("/");
-      return;
-    }
+    const token = sessionStorage.getItem("token") || localStorage.getItem("token");
 
     // Fetch parameter spec once
-    fetch(`${API}/meta/parameter-spec`)
+    fetch(`${API}/meta/parameter-spec`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: "include",
+    })
       .then((r) => r.json())
       .then(setParamSpec)
       .catch(console.error);
@@ -77,6 +75,72 @@ export default function InstructorDashboard() {
     // Create or get session
     const initSession = async () => {
       let code = sessionStorage.getItem("session_code");
+      const selectedCaseStr = sessionStorage.getItem("selected_case");
+
+      if (selectedCaseStr) {
+        let caseObj = null;
+        try {
+          caseObj = JSON.parse(selectedCaseStr);
+        } catch (e) {
+          console.error("Failed to parse selected_case", e);
+        }
+
+        if (caseObj) {
+          const spec = caseObj.spec || {
+            name: caseObj.patientName || caseObj.name || "Clinical Case",
+            patient_details: {
+              patientName: caseObj.patientName,
+              age: caseObj.age,
+              gender: caseObj.gender,
+              heightCm: caseObj.heightCm,
+              weightKg: caseObj.weightKg,
+              bloodGroup: caseObj.bloodGroup,
+              occupation: caseObj.occupation,
+              maritalStatus: caseObj.maritalStatus,
+              allergies: caseObj.allergies,
+              medicalHistory: caseObj.medicalHistory,
+              chiefComplaint: caseObj.chiefComplaint,
+              diagnosis: caseObj.diagnosis,
+              triageLevel: caseObj.triageLevel,
+            },
+            symptoms: caseObj.symptoms,
+            initial_readings: {
+              heartRate: caseObj.monitorValues?.heartRate || caseObj.heartRate || 80,
+              ecgRhythm: caseObj.monitorValues?.ecgRhythm || caseObj.rhythm || "Sinus Rhythm",
+              bloodPressure: {
+                systolic: caseObj.monitorValues?.systolicBp || caseObj.systolicBp || 120,
+                diastolic: caseObj.monitorValues?.diastolicBp || caseObj.diastolicBp || 80,
+                map: Math.round(((caseObj.monitorValues?.systolicBp || caseObj.systolicBp || 120) + 2 * (caseObj.monitorValues?.diastolicBp || caseObj.diastolicBp || 80)) / 3),
+              },
+              spo2: caseObj.monitorValues?.spo2 || caseObj.spo2 || 98,
+              respiratoryRate: caseObj.monitorValues?.respiratoryRate || caseObj.respiratoryRate || 14,
+              etco2: caseObj.monitorValues?.etco2 || caseObj.etco2 || 35,
+              temperature: {
+                bloodTemperature: parseFloat(caseObj.monitorValues?.temperature) || 37.0,
+                peripheralTemperature: (parseFloat(caseObj.monitorValues?.temperature) || 37.0) - 0.5,
+              },
+            },
+          };
+
+          try {
+            const createRes = await fetch(`${API}/session/create`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`
+              },
+              body: JSON.stringify({ force_new: true, spec })
+            });
+            const createData = await createRes.json();
+            code = createData.session_code;
+            sessionStorage.setItem("session_code", code);
+          } catch (err) {
+            console.error("Failed to create session with selected_case", err);
+          }
+          sessionStorage.removeItem("selected_case");
+        }
+      }
+
       if (!code) {
         const res = await fetch(`${API}/session/create`, {
           method: "POST",
@@ -200,10 +264,11 @@ export default function InstructorDashboard() {
 
   const handleConfirmEndSession = async () => {
     if (sessionCode) {
-      const token = sessionStorage.getItem("token");
+      const token = sessionStorage.getItem("token") || localStorage.getItem("token");
       try {
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
         await fetch(`${API}/session/${sessionCode}/end`, { 
-          method: "POST", headers: { Authorization: `Bearer ${token}` } 
+          method: "POST", headers, credentials: "include"
         });
       } catch (e) {
         console.error("Failed to end session on logout", e);

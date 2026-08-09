@@ -12,7 +12,7 @@ WS_URL = "ws://localhost:8000/ws/ecg"
 
 async def test_instructor_flow():
     print("1. Logging in as instructor...")
-    resp = requests.post(f"{BASE_URL}/auth/login", json={"username": "instructor", "password": "instructor123"})
+    resp = requests.post(f"{BASE_URL}/auth/login", json={"username": "instructor", "password": "instructor123", "role": "instructor"})
     assert resp.status_code == 200, f"Login failed: {resp.text}"
     token = resp.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}

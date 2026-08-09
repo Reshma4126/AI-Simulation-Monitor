@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 import bcrypt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 
@@ -48,24 +48,33 @@ def decode_token(token: str) -> dict:
 
 
 async def get_current_user(
+    request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
 ) -> dict:
-    """FastAPI dependency that returns the current user dict."""
-    if not credentials or not credentials.credentials:
-        return {"id": 1, "username": "instructor", "role": "instructor"}
+    """FastAPI dependency that returns the current authenticated user dict."""
+    raw_token = None
+    if credentials and credentials.credentials:
+        raw_token = credentials.credentials.strip("'\" \t\r\n")
+    
+    if not raw_token:
+        cookie_token = request.cookies.get("access_token")
+        if cookie_token:
+            raw_token = cookie_token.strip("'\" \t\r\n")
 
-    raw_token = credentials.credentials.strip("'\" \t\r\n")
-
-    if raw_token in ("demo-token", "", "null", "undefined"):
-        return {"id": 1, "username": "instructor", "role": "instructor"}
+    if not raw_token or raw_token in ("demo-token", "", "null", "undefined"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+        )
 
     try:
         payload = decode_token(raw_token)
-    except HTTPException:
-        return {"id": 1, "username": "instructor", "role": "instructor"}
+    except HTTPException as e:
+        raise e
 
     username = payload.get("sub") or payload.get("username") or payload.get("user")
     user_id = payload.get("id")
+    token_role = payload.get("role")
 
     user = None
     try:
@@ -83,18 +92,39 @@ async def get_current_user(
         pass
 
     if not user:
-        # If valid JWT payload was decoded, construct user dict from token claims
+        if not username or not token_role:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid session identity",
+            )
         user = {
             "id": user_id or 1,
-            "username": username or "user",
-            "role": payload.get("role", "instructor"),
+            "username": username,
+            "role": token_role,
         }
 
     user["_id"] = user.get("id", 1)
     return user
 
 
+async def require_authenticated_user(user: dict = Depends(get_current_user)) -> dict:
+    return user
+
+
 async def require_instructor(user: dict = Depends(get_current_user)) -> dict:
     if user.get("role") not in ("instructor", "operator", "admin"):
-        raise HTTPException(status_code=403, detail="Instructor role required")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Instructor role required",
+        )
     return user
+
+
+async def require_student(user: dict = Depends(get_current_user)) -> dict:
+    if user.get("role") not in ("student", "admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Student role required",
+        )
+    return user
+

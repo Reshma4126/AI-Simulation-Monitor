@@ -1,5 +1,6 @@
 import React from "react";
 import { Activity, Search, Bell, ChevronDown, LogOut, Settings, Play } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 import "./dashboard.css";
 
 export default function Navbar({
@@ -13,6 +14,13 @@ export default function Navbar({
   handleLogout,
   onOpenSettings,
 }) {
+  const { user } = useAuth();
+
+  const username = user?.username || "Instructor";
+  const initials = username.substring(0, 2).toUpperCase();
+  const displayName = username.charAt(0).toUpperCase() + username.slice(1);
+  const displayRole = user?.role === "student" ? "Student" : "Clinical Instructor";
+
   return (
     <header className="medsim-navbar">
       {/* Left: Logo & Title */}
@@ -107,32 +115,10 @@ export default function Navbar({
                 }}
               >
                 <div style={{ fontWeight: "600", color: "#0F766E" }}>
-                  Session #8943 Completed
+                  Session Active
                 </div>
                 <div style={{ color: "#475569", marginTop: "2px" }}>
-                  Automated debrief report is ready for VF Cardiac Arrest.
-                </div>
-                <div style={{ fontSize: "11px", color: "#94A3B8", marginTop: "4px" }}>
-                  10 mins ago
-                </div>
-              </div>
-              <div
-                style={{
-                  padding: "10px",
-                  borderRadius: "10px",
-                  backgroundColor: "#F8FAFC",
-                  border: "1px solid #E2E8F0",
-                  fontSize: "13px",
-                }}
-              >
-                <div style={{ fontWeight: "600", color: "#0F172A" }}>
-                  Scenario Library Updated
-                </div>
-                <div style={{ color: "#475569", marginTop: "2px" }}>
-                  Added "Anaphylactic Shock - Grade III" scenario.
-                </div>
-                <div style={{ fontSize: "11px", color: "#94A3B8", marginTop: "4px" }}>
-                  1 hour ago
+                  Telemetry & simulation engine online.
                 </div>
               </div>
             </div>
@@ -148,13 +134,13 @@ export default function Navbar({
             }}
             className="medsim-profile-trigger"
           >
-            <div className="medsim-avatar">JD</div>
+            <div className="medsim-avatar">{initials}</div>
             <div style={{ textAlign: "left", paddingRight: "4px" }}>
               <div style={{ fontSize: "13px", fontWeight: "600", color: "#0F172A", lineHeight: 1.2 }}>
-                Dr. John Doe
+                {displayName}
               </div>
               <div style={{ fontSize: "11px", color: "#64748B", lineHeight: 1.2 }}>
-                Clinical Instructor
+                {displayRole}
               </div>
             </div>
             <ChevronDown size={14} color="#64748B" />
@@ -179,10 +165,10 @@ export default function Navbar({
             >
               <div style={{ padding: "12px 16px", borderBottom: "1px solid #F1F5F9" }}>
                 <div style={{ fontWeight: "600", fontSize: "14px", color: "#0F172A" }}>
-                  Dr. John Doe
+                  {displayName}
                 </div>
                 <div style={{ fontSize: "12px", color: "#64748B" }}>
-                  john.doe@hospital.org
+                  Role: {displayRole}
                 </div>
               </div>
 

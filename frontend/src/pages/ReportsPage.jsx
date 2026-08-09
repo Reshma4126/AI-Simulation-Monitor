@@ -1,13 +1,15 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/dashboard/Navbar";
 import Sidebar from "../components/dashboard/Sidebar";
 import DashboardModals from "../components/dashboard/DashboardModals";
-import { FileText, Download, Filter, Search } from "lucide-react";
+import { FileText, Download, Share2, CheckCircle2, Clock, Filter, Search } from "lucide-react";
 import "../components/dashboard/dashboard.css";
 
 export default function ReportsPage() {
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
@@ -15,19 +17,19 @@ export default function ReportsPage() {
   const [activeModal, setActiveModal] = useState(null);
 
   const reports = [
-    { id: 1, title: "VF Cardiac Arrest - Batch A", date: "06 Aug 2026", score: "94%", author: "Dr. John Doe", status: "Verified" },
-    { id: 2, title: "Anaphylaxis Crisis Evaluation", date: "05 Aug 2026", score: "88%", author: "Dr. John Doe", status: "Verified" },
-    { id: 3, title: "Pediatric Status Asthmaticus Audit", date: "05 Aug 2026", score: "91%", author: "Dr. Jane Smith", status: "Verified" },
-    { id: 4, title: "STEMI Interventional Response", date: "04 Aug 2026", score: "85%", author: "Dr. John Doe", status: "Draft" },
+    { id: 1, title: "VF Cardiac Arrest Resuscitation Debrief", date: "06 Aug 2026", score: "94%", author: "Clinical Team", status: "Verified" },
+    { id: 2, title: "Anaphylactic Shock Management Performance", date: "06 Aug 2026", score: "88%", author: "Clinical Team", status: "Verified" },
+    { id: 3, title: "Pediatric Status Asthmaticus Audit", date: "05 Aug 2026", score: "91%", author: "Clinical Team", status: "Verified" },
+    { id: 4, title: "STEMI Interventional Response", date: "04 Aug 2026", score: "85%", author: "Clinical Team", status: "Draft" },
   ];
 
   const handleStartSimulation = () => {
     navigate("/initializing");
   };
 
-  const handleLogout = () => {
-    sessionStorage.clear();
-    navigate("/");
+  const handleLogout = async () => {
+    await logout();
+    navigate("/", { replace: true });
   };
 
   return (

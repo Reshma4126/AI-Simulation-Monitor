@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/dashboard/Navbar";
 import Sidebar from "../components/dashboard/Sidebar";
 import WelcomeCard from "../components/dashboard/WelcomeCard";
@@ -11,6 +12,7 @@ import "../components/dashboard/dashboard.css";
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   // State
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
@@ -77,9 +79,9 @@ export default function DashboardPage() {
       s.status.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleLogout = () => {
-    sessionStorage.clear();
-    navigate("/");
+  const handleLogout = async () => {
+    await logout();
+    navigate("/", { replace: true });
   };
 
   const handleStartSimulation = () => {

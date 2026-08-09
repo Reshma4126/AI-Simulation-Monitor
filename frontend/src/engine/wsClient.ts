@@ -9,20 +9,25 @@ import { useECGStore } from "../store/ecgStore";
 
 function getWsUrl(): string {
   const envUrl = import.meta.env.VITE_WS_URL || import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
-  const base = envUrl.replace(/\/$/, "");
+  let base = envUrl.replace(/\/$/, "");
+  let url = "";
   if (base.startsWith("ws://") || base.startsWith("wss://")) {
-    return `${base}/ws/ecg`;
+    url = `${base}/ws/ecg`;
+  } else if (base.startsWith("https://")) {
+    url = `${base.replace(/^https:\/\//, "wss://")}/ws/ecg`;
+  } else if (base.startsWith("http://")) {
+    url = `${base.replace(/^http:\/\//, "ws://")}/ws/ecg`;
+  } else {
+    url = `ws://${base}/ws/ecg`;
   }
-  if (base.startsWith("https://")) {
-    return `${base.replace(/^https:\/\//, "wss://")}/ws/ecg`;
+
+  const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+  if (token && token !== "demo-token") {
+    url += `?token=${encodeURIComponent(token)}`;
   }
-  if (base.startsWith("http://")) {
-    return `${base.replace(/^http:\/\//, "ws://")}/ws/ecg`;
-  }
-  return `ws://${base}/ws/ecg`;
+  return url;
 }
 
-const WS_URL = getWsUrl();
 const RECONNECT_DELAY_MS = 2000;
 
 let ws: WebSocket | null = null;
@@ -61,10 +66,12 @@ export function connect(): void {
     return;
   }
 
-  console.log("[WS] Connecting to", WS_URL);
+  const targetUrl = getWsUrl();
+  console.log("[WS] Connecting to", targetUrl);
   // Expose the send function immediately so UI commands can queue before OPEN.
   useECGStore.getState()._setSendFn(sendCommand);
-  const socket = new WebSocket(WS_URL);
+  const socket = new WebSocket(targetUrl);
+
   ws = socket;
   socket.binaryType = "arraybuffer";
 

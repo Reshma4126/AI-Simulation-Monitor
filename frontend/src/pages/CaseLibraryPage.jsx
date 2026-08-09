@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/dashboard/Navbar";
 import Sidebar from "../components/dashboard/Sidebar";
 import DashboardModals from "../components/dashboard/DashboardModals";
@@ -12,6 +13,7 @@ import "../components/dashboard/dashboard.css";
 
 export default function CaseLibraryPage() {
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   // State
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
@@ -51,15 +53,16 @@ export default function CaseLibraryPage() {
   const favoritesCount = casesList.filter((c) => c.isFavorite).length;
 
   const handleStartSimulation = (caseItem) => {
+    sessionStorage.removeItem("session_code");
     if (caseItem) {
       sessionStorage.setItem("selected_case", JSON.stringify(caseItem));
     }
     navigate("/initializing");
   };
 
-  const handleLogout = () => {
-    sessionStorage.clear();
-    navigate("/");
+  const handleLogout = async () => {
+    await logout();
+    navigate("/", { replace: true });
   };
 
   return (

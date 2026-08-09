@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/dashboard/Navbar";
 import Sidebar from "../components/dashboard/Sidebar";
 import DashboardModals from "../components/dashboard/DashboardModals";
@@ -169,11 +170,11 @@ export default function DebriefPage() {
     }
   };
 
+  const { logout } = useAuth();
   const handleStartSimulation = () => navigate("/initializing");
-  const handleLogout = () => {
-    sessionStorage.clear();
-    localStorage.clear();
-    navigate("/");
+  const handleLogout = async () => {
+    await logout();
+    navigate("/", { replace: true });
   };
 
   // Extract debrief fields

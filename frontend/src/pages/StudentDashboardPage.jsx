@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import { Activity, LogOut, ArrowRight, ShieldCheck } from "lucide-react";
 import "../components/dashboard/dashboard.css";
 
@@ -7,6 +8,7 @@ export default function StudentDashboardPage() {
   const [sessionCode, setSessionCode] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const handleJoin = (e) => {
     e.preventDefault();
@@ -19,9 +21,9 @@ export default function StudentDashboardPage() {
     navigate(`/monitor/${code}`);
   };
 
-  const handleLogout = () => {
-    sessionStorage.clear();
-    navigate("/");
+  const handleLogout = async () => {
+    await logout();
+    navigate("/", { replace: true });
   };
 
   return (

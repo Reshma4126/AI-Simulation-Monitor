@@ -139,49 +139,122 @@ async def load_scenarios_to_cache():
 
 def map_scenario_to_state(monitor_values):
     state_updates = {}
-    if "heartRate" in monitor_values:
-        state_updates["HR"] = float(monitor_values["heartRate"])
-        state_updates["pulse_rate"] = float(monitor_values["heartRate"])
-    if "spo2" in monitor_values:
-        state_updates["SpO2"] = float(monitor_values["spo2"])
+    if not isinstance(monitor_values, dict):
+        return state_updates
+
+    if "heartRate" in monitor_values and monitor_values["heartRate"] is not None:
+        try:
+            val = float(monitor_values["heartRate"])
+            state_updates["HR"] = val
+            state_updates["pulse_rate"] = val
+        except (ValueError, TypeError):
+            pass
+
+    if "spo2" in monitor_values and monitor_values["spo2"] is not None:
+        try:
+            state_updates["SpO2"] = float(monitor_values["spo2"])
+        except (ValueError, TypeError):
+            pass
+
+    sys_v, dia_v = None, None
     if "bloodPressure" in monitor_values:
         bp = monitor_values["bloodPressure"]
-        state_updates["ABP_sys"] = float(bp.get("systolic", 120.0))
-        state_updates["ABP_dia"] = float(bp.get("diastolic", 80.0))
-        state_updates["MAP"] = float(bp.get("map", 93.0))
-        state_updates["NBP_sys"] = float(bp.get("systolic", 120.0))
-        state_updates["NBP_dia"] = float(bp.get("diastolic", 80.0))
-        state_updates["NBP_mean"] = float(bp.get("map", 93.0))
-    if "respiratoryRate" in monitor_values:
-        state_updates["avRR"] = float(monitor_values["respiratoryRate"])
-    if "temperature" in monitor_values:
+        if isinstance(bp, dict):
+            sys_v = bp.get("systolic")
+            dia_v = bp.get("diastolic")
+        elif isinstance(bp, str) and "/" in bp:
+            try:
+                parts = bp.split("(")[0].strip().split("/")
+                sys_v = float(parts[0])
+                dia_v = float(parts[1])
+            except Exception:
+                pass
+    if sys_v is None and "systolicBp" in monitor_values:
+        sys_v = monitor_values.get("systolicBp")
+    if dia_v is None and "diastolicBp" in monitor_values:
+        dia_v = monitor_values.get("diastolicBp")
+
+    if sys_v is not None:
+        try:
+            sys_num = float(sys_v)
+            state_updates["ABP_sys"] = sys_num
+            state_updates["NBP_sys"] = sys_num
+        except (ValueError, TypeError):
+            pass
+
+    if dia_v is not None:
+        try:
+            dia_num = float(dia_v)
+            state_updates["ABP_dia"] = dia_num
+            state_updates["NBP_dia"] = dia_num
+        except (ValueError, TypeError):
+            pass
+
+    if "ABP_sys" in state_updates and "ABP_dia" in state_updates and state_updates["ABP_sys"] > 0:
+        map_val = round((state_updates["ABP_sys"] + 2 * state_updates["ABP_dia"]) / 3.0, 1)
+        state_updates["MAP"] = map_val
+        state_updates["NBP_mean"] = map_val
+
+    if "respiratoryRate" in monitor_values and monitor_values["respiratoryRate"] is not None:
+        try:
+            state_updates["avRR"] = float(monitor_values["respiratoryRate"])
+        except (ValueError, TypeError):
+            pass
+
+    if "temperature" in monitor_values and monitor_values["temperature"] is not None:
         temp = monitor_values["temperature"]
-        state_updates["Tblood"] = float(temp.get("bloodTemperature", 37.0))
-        state_updates["Tperi"] = float(temp.get("peripheralTemperature", 36.5))
-    if "cardiacOutput" in monitor_values:
-        state_updates["CO"] = float(monitor_values["cardiacOutput"])
+        if isinstance(temp, dict):
+            try:
+                t_val = float(temp.get("bloodTemperature", 37.0))
+                state_updates["Tblood"] = t_val
+                state_updates["Tperi"] = float(temp.get("peripheralTemperature", t_val - 0.5))
+            except (ValueError, TypeError):
+                pass
+        elif isinstance(temp, (int, float)):
+            t_val = float(temp)
+            state_updates["Tblood"] = t_val
+            state_updates["Tperi"] = round(t_val - 0.5, 1)
+        elif isinstance(temp, str):
+            try:
+                t_val = float(temp.replace("°C", "").replace("C", "").strip())
+                state_updates["Tblood"] = t_val
+                state_updates["Tperi"] = round(t_val - 0.5, 1)
+            except Exception:
+                pass
+
+    if "cardiacOutput" in monitor_values and monitor_values["cardiacOutput"] is not None:
+        try:
+            state_updates["CO"] = float(monitor_values["cardiacOutput"])
+        except (ValueError, TypeError):
+            pass
+
     if "pulmonaryArteryPressure" in monitor_values:
         pap = monitor_values["pulmonaryArteryPressure"]
-        state_updates["PAP_sys"] = float(pap.get("systolic", 20.0))
-        state_updates["PAP_dia"] = float(pap.get("diastolic", 10.0))
-        state_updates["PAP_mean"] = float(pap.get("mean", 13.0))
-    if "pulmonaryCapillaryWedgePressure" in monitor_values:
-        state_updates["PAP_wedge"] = float(monitor_values["pulmonaryCapillaryWedgePressure"])
-    if "etco2" in monitor_values:
-        state_updates["etCO2"] = float(monitor_values["etco2"])
-    if "inco2" in monitor_values:
-        state_updates["inCO2"] = float(monitor_values["inco2"])
-    if "inspiredOxygen" in monitor_values:
-        state_updates["inO2"] = float(monitor_values["inspiredOxygen"])
-    if "endTidalOxygen" in monitor_values:
-        state_updates["etO2"] = float(monitor_values["endTidalOxygen"])
-    if "inspiredNitrousOxide" in monitor_values:
-        state_updates["inN2O"] = float(monitor_values["inspiredNitrousOxide"])
-    if "endTidalNitrousOxide" in monitor_values:
-        state_updates["etN2O"] = float(monitor_values["endTidalNitrousOxide"])
-    if "ecgRhythm" in monitor_values:
+        if isinstance(pap, dict):
+            try:
+                state_updates["PAP_sys"] = float(pap.get("systolic", 20.0))
+                state_updates["PAP_dia"] = float(pap.get("diastolic", 10.0))
+                state_updates["PAP_mean"] = float(pap.get("mean", 13.0))
+            except (ValueError, TypeError):
+                pass
+
+    if "pulmonaryCapillaryWedgePressure" in monitor_values and monitor_values["pulmonaryCapillaryWedgePressure"] is not None:
+        try:
+            state_updates["PAP_wedge"] = float(monitor_values["pulmonaryCapillaryWedgePressure"])
+        except (ValueError, TypeError):
+            pass
+
+    if "etco2" in monitor_values and monitor_values["etco2"] is not None:
+        try:
+            state_updates["etCO2"] = float(monitor_values["etco2"])
+        except (ValueError, TypeError):
+            pass
+
+    if "ecgRhythm" in monitor_values and monitor_values["ecgRhythm"]:
         state_updates["rhythm"] = str(monitor_values["ecgRhythm"])
+
     return state_updates
+
 
 async def emit_scenario_selected(session_code, scenario):
     student_scenario = dict(scenario)
@@ -253,16 +326,27 @@ async def disconnect(sid):
 @sio.event
 async def join_session(sid, data):
     """Client joins a session room."""
-    session_code = data.get("session_code")
-    token = data.get("token")
-    if not session_code or not token:
-        await sio.emit("error", {"message": "Missing session_code or token"}, to=sid)
+    environ = sio.environ.get(sid, {}) if hasattr(sio, 'environ') else {}
+    session_code = data.get("session_code") if isinstance(data, dict) else None
+    token = data.get("token") if isinstance(data, dict) else None
+
+    if not token and environ and "HTTP_COOKIE" in environ:
+        try:
+            from http.cookies import SimpleCookie
+            cookie = SimpleCookie(environ.get("HTTP_COOKIE"))
+            if "access_token" in cookie:
+                token = cookie["access_token"].value
+        except Exception:
+            pass
+
+    if not session_code or not token or token in ("demo-token", "", "null", "undefined"):
+        await sio.emit("error", {"message": "Missing or invalid token"}, to=sid)
         return
 
     try:
         payload = decode_token(token)
     except Exception:
-        await sio.emit("error", {"message": "Invalid token"}, to=sid)
+        await sio.emit("error", {"message": "Invalid or expired token"}, to=sid)
         return
 
     pool = await get_db_pool()

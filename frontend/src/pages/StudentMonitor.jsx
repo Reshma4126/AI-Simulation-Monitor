@@ -73,6 +73,7 @@ function InlineReadings() {
 
 export default function StudentMonitor() {
   const { sessionCode } = useParams();
+  const navigate = useNavigate();
   const setFullState = useMonitorStore((s) => s.setFullState);
   const [comments, setComments] = useState([]);
   const [joinStatus, setJoinStatus] = useState("joining"); // "joining" | "joined" | "error"
@@ -80,10 +81,11 @@ export default function StudentMonitor() {
   const [scenario, setScenario] = useState(null);
 
   useEffect(() => {
-    const token = sessionStorage.getItem("token");
+    const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+
     if (!token) {
       console.warn("[StudentMonitor] No token — redirecting to login");
-      window.location.href = "/";
+      navigate("/");
       return;
     }
 
@@ -92,7 +94,7 @@ export default function StudentMonitor() {
 
     const doJoin = () => {
       console.log("[StudentMonitor] Emitting join_session for:", sessionCode);
-      socket.emit("join_session", { session_code: sessionCode, token });
+      socket.emit("join_session", { session_code: sessionCode, token: token || "" });
     };
 
     if (!socket.connected) {
@@ -107,7 +109,7 @@ export default function StudentMonitor() {
 
     // ── Event handlers ──────────────────────────────────────
     const handleJoinConfirmed = (data) => {
-      console.log("[StudentMonitor] join_confirmed:", data);
+      console.log("[StudentMonitor] Joined session confirmed:", data);
       setJoinStatus("joined");
     };
 
@@ -122,20 +124,18 @@ export default function StudentMonitor() {
         setJoinStatus("error");
         setJoinError(data.message);
         setTimeout(() => {
-          sessionStorage.clear();
-          window.location.href = "/";
+          navigate("/student-dashboard", { replace: true });
         }, 2000);
       }
     };
 
     const handleSessionEnded = () => {
-      console.log("[StudentMonitor] session_ended — redirecting to login");
+      console.log("[StudentMonitor] session_ended — redirecting");
       setJoinStatus("error");
-      setJoinError("Session has ended by the instructor.");
+      setJoinError("Session has been ended by the instructor.");
       setTimeout(() => {
-        sessionStorage.clear();
         socket.disconnect();
-        window.location.href = "/";
+        navigate(`/debrief/${sessionCode}`, { replace: true });
       }, 2000);
     };
 

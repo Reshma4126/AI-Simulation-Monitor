@@ -4,6 +4,7 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
 
 const socket = io(BACKEND_URL, {
   autoConnect: false,
+  withCredentials: true,
   transports: ["websocket", "polling"],
   reconnection: true,
   reconnectionAttempts: Infinity,
@@ -13,10 +14,10 @@ const socket = io(BACKEND_URL, {
 socket.on("connect", () => {
   console.log("[Socket] Connected:", socket.id);
 
-  // Auto-rejoin session on reconnect (e.g. after backend restart)
-  const token = sessionStorage.getItem("token");
+  // Auto-rejoin session on reconnect
+  const token = sessionStorage.getItem("token") || localStorage.getItem("token");
   const sessionCode = sessionStorage.getItem("session_code");
-  if (token && sessionCode) {
+  if (token && token !== "demo-token" && sessionCode) {
     console.log("[Socket] Auto-rejoining session:", sessionCode);
     socket.emit("join_session", { session_code: sessionCode, token });
   }
